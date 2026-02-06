@@ -1,0 +1,12 @@
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.vtk
+*.synctex.gz
+*.pvd
+**/__pycache__/
+linear_elasticity.pdf
