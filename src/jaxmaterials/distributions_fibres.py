@@ -85,8 +85,6 @@ class FibreDistribution2d:
         r_fibre_dist=FibreRadiusDistribution(
             r_avg=7.5e-3, r_min=5.0e-3, r_max=10.0e-3, sigma=0.5e-3, gaussian=True
         ),
-        kdiff_background=1.0,
-        kdiff_fibre=0.1,
         seed=141517,
         fast_code=True,
     ):
@@ -94,16 +92,12 @@ class FibreDistribution2d:
         :arg domain_size: extent of domain in both directions, 2d array [L_x, L_y]
         :arg volume_fraction: volume fraction of fibres
         :arg r_fibre_dist: fibre radius distribution, instance of class FibreRadiusDistribution
-        :arg kdiff_background: diffusion coefficient in background
-        :arg kdiff_fibre: diffusion coefficient in fibre
         :arg seed: seed of random number generator
         :arg fast_code: use generated C code
         """
         self.domain_size = np.asarray(domain_size, dtype=np.float64)
         self._volume_fraction = volume_fraction
         self._r_fibre_dist = r_fibre_dist
-        self._kdiff_background = kdiff_background
-        self._kdiff_fibre = kdiff_fibre
         self._rng = np.random.default_rng(seed=seed)
         # Compute initial fibre locations, arranged in a regular grid
         n_fibres_per_direction = np.round(
