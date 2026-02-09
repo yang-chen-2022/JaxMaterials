@@ -84,9 +84,6 @@ def initialise_material(grid_spec, fibre_radius=0.2, dtype=jnp.float64):
     return jnp.array(mu, dtype=dtype), jnp.array(lmbda, dtype=dtype)
 
 
-jax.profiler.save_device_memory_profile("memory.prof")
-
-
 def backward_derivative(g, grid_spec, direction):
     """Compute the backward derivative in a specified direction
 

@@ -100,7 +100,7 @@ class FibreDistribution2d:
         self._r_fibre_dist = r_fibre_dist
         self._rng = np.random.default_rng(seed=seed)
         # Compute initial fibre locations, arranged in a regular grid
-        n_fibres_per_direction = np.round(
+        n_fibres_per_direction = np.ceil(
             self.domain_size
             / self._r_fibre_dist.r_avg
             * np.sqrt(self._volume_fraction / np.pi)
