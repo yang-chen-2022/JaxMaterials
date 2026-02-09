@@ -9,6 +9,7 @@ dependencies = [
     "numpy",
     "matplotlib",
     "jax",
+    "pytorch",
 ]
 requires-python = ">=3.12"
 authors = [
