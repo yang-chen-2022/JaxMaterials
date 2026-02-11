@@ -1,13 +1,17 @@
+"""Main script for visualising layered fibre dataset"""
+
 import numpy as np
-import torch
 from jaxmaterials.distributions_fibres import FibreRadiusDistribution
-from jaxmaterials.data_generator import LayerFibresDataset
+from jaxmaterials.data_generator import LayerFibresDataset, visualise_fibres
 from jaxmaterials.utilities import save_to_vtk
 
+# Domain
 domain_size = [0.5, 0.3, 0.2]
 d_void = 0.01
-number_of_cells = [5 * 32, 3 * 32, 2 * 32]
+N = 16
+number_of_cells = [5 * N, 3 * N, 2 * N]
 
+# Distribution of fibre radii
 r_avg = 7.5e-3
 r_min = 5.0e-3
 r_max = 10.0e-3
@@ -16,9 +20,10 @@ volume_fraction = 0.3
 radius_distribution = FibreRadiusDistribution(
     r_avg=r_avg, r_min=r_min, r_max=r_max, sigma=sigma, gaussian=True
 )
+# number of layers with fibres
 nlayers = 3
-n_samples = 8
-batch_size = 4
+
+n_samples = 16
 rng = np.random.default_rng(seed=5713853)
 
 dataset = LayerFibresDataset(
@@ -37,13 +42,16 @@ dataset = LayerFibresDataset(
     lambda_void=1.0,
     dtype=np.float64,
     rng=rng,
+    verbose=True,
 )
 
+# Visualise the projected fibre locations for samples
 for k in range(n_samples):
     layer_boundaries, fibre_positions, fibre_radii, fibre_orientations = (
         dataset.generate_fibre_positions()
     )
-    dataset.visualise(
+    visualise_fibres(
+        domain_size,
         layer_boundaries,
         fibre_positions,
         fibre_radii,
@@ -51,12 +59,8 @@ for k in range(n_samples):
         filename=f"fibres_{k+1:03d}.pdf",
     )
 
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-for data, sigma_bar in iter(dataloader):
-    print(data.shape, sigma_bar.shape)
-
-for k in range(4):
+# Save gridded material properties to vtk files
+for k in range(n_samples):
     data, sigma_bar = dataset[k]
     save_to_vtk(
         {"mu": data[0], "lambda": data[1]},

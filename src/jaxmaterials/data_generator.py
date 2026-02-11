@@ -2,13 +2,14 @@ from collections import namedtuple
 from jax import numpy as jnp
 import numpy as np
 import torch
+import tqdm
 from jaxmaterials.distributions_fibres import (
     FibreDistribution2d,
 )
 from jaxmaterials.linear_elasticity import lippmann_schwinger
 from matplotlib import pyplot as plt
 
-__all__ = ["LayerFibresDataset"]
+__all__ = ["LayerFibresDataset", "visualise_fibres"]
 
 
 class LayerFibresDataset(torch.utils.data.Dataset):
@@ -16,11 +17,28 @@ class LayerFibresDataset(torch.utils.data.Dataset):
 
     The domain of size [L_x, L_y, L_z] is vertically divided into two parts:
 
-    1. the regions [0,d_void] and [L_z-d_void,L_z] is a uniform material with (mu_void, lambda_void)
-    2. the region [d_void,L_z-d_void] contains n_layers layers of fibres oriented in the X- and Y-
-       direction. The depth of these layers are random. The layers have Lame
-       parameters (mu_fibre, lambda_fibre), with the surrounding material
-       having (mu_material, lambda_material).
+    1. the regions [0,d_void] and [L_z-d_void,L_z] contain a uniform material
+       with (mu_void, lambda_void)
+    2. the region [d_void,L_z-d_void] contains n_layers layers of fibres
+       alternatively oriented in the X- and Y-direction. The depths of these
+       layers are random. The layers have Lame parameters
+       (mu_fibre, lambda_fibre), with the surrounding material
+       being characterised by (mu_material, lambda_material).
+
+    The returned samples (X,y) describe the Lame-coefficients (in X) and
+    resulting effective 6x6 material tensor C_{eff} (in y) defined by
+
+        bar(sigma)_i = (C_{eff})_{ij} bar(epsilon)_j
+
+    where the independent components of the strain epsilon and stress sigma
+    are represented by six numbers each:
+
+        (E_{00}, E_{11}, E_{22}, E_{23}, E_{13}, E_{12})
+
+    Hence the shapes of (X,y) are:
+
+    * Lame coefficients (mu,lambda) = X [2, N_x, N_y, N_z]
+    * Effective elasticity tensor C_{eff} = y [6, 6]
     """
 
     def __init__(
@@ -40,6 +58,7 @@ class LayerFibresDataset(torch.utils.data.Dataset):
         lambda_void=0.01,
         rng=None,
         dtype=np.float64,
+        verbose=False,
     ):
         """Initialise instance
 
@@ -84,7 +103,11 @@ class LayerFibresDataset(torch.utils.data.Dataset):
             shape=(self.n_samples, 2, *self.number_of_cells), dtype=self.dtype
         )
         self._sigma_bar = np.empty(shape=(self.n_samples, 6, 6), dtype=self.dtype)
-        for j in range(self.n_samples):
+        generator_range = range(self.n_samples)
+        if verbose:
+            print("Generating data...")
+            generator_range = tqdm.tqdm(generator_range)
+        for j in generator_range:
             _, fibre_positions, fibre_radii, fibre_orientations = (
                 self.generate_fibre_positions()
             )
@@ -107,7 +130,6 @@ class LayerFibresDataset(torch.utils.data.Dataset):
                     lmbda, mu, E_mean, grid_spec, tolerance=tolerance
                 )
                 self._sigma_bar[j, k, :] = jnp.mean(sigma, axis=(1, 2, 3))
-            print(f"Generated data {j+1:5d}")
 
     def __len__(self):
         """Number of samples"""
@@ -217,109 +239,110 @@ class LayerFibresDataset(torch.utils.data.Dataset):
             ],
             indexing="ij",
         )
-        v_void = self.mu_void
-        v_fibre = self.mu_fibre
-        v_material = self.mu_material
-        all_data = []
-        for v_void, v_fibre, v_material in zip(
-            [self.mu_void, self.lambda_void],
-            [self.mu_fibre, self.lambda_fibre],
-            [self.mu_material, self.lambda_material],
-        ):
-            data = np.zeros(shape=self.number_of_cells, dtype=self.dtype) + v_material
-            data += ((Z < self.d_void) + (Z > self.domain_size[2] - self.d_void)) * (
-                v_void - v_material
+        data = np.zeros(shape=(2, *self.number_of_cells), dtype=self.dtype)
+        for j, (v_void, v_fibre, v_material) in enumerate(
+            zip(
+                [self.mu_void, self.lambda_void],
+                [self.mu_fibre, self.lambda_fibre],
+                [self.mu_material, self.lambda_material],
             )
+        ):
+            data[j, ...] = v_material
+            data[j, ...] += (
+                (Z < self.d_void) + (Z > self.domain_size[2] - self.d_void)
+            ) * (v_void - v_material)
             for fibre_position, fibre_radius, orientation in zip(
                 fibre_positions, fibre_radii, fibre_orientations
             ):
                 coord = Y if orientation else X
                 for p, r in zip(fibre_position, fibre_radius):
-                    data += ((coord - p[0]) ** 2 + (Z - p[1]) ** 2 < r**2) * (
+                    data[j, ...] += ((coord - p[0]) ** 2 + (Z - p[1]) ** 2 < r**2) * (
                         v_fibre - v_material
                     )
-            all_data.append(data)
-        return np.asarray(all_data)
+        return np.asarray(data)
 
-    def visualise(
-        self,
-        layer_boundaries,
+
+def visualise_fibres(
+    domain_size,
+    layer_boundaries,
+    fibre_positions,
+    fibre_radii,
+    fibre_orientations,
+    filename="fibres.pdf",
+):
+    """Auxilliary method for visualising the location of the fibres in 2d
+
+    Generate plot of the projection of the fibres onto the XZ and YZ plane.
+    The input is usually created by the generate_fibre_positions() method.
+
+    :arg domain_size: size [L_x, L_y, L_z] of the domain
+    :arg layer_boundaries: the locations of the boundaries between layers
+    :arg fibre_positions: list with arrays of fibre positions in each vertical layer
+    :arg fibre_radii: list with arrays of fibre radii in each vertical layer
+    :arg fibre_orientations: orientations of fibres
+    """
+    horizontal_size = max(domain_size[0], domain_size[1])
+    layer_depths = layer_boundaries[1:] - layer_boundaries[:-1]
+    d_void = layer_boundaries[0]
+    plt.clf()
+    ax = plt.gca()
+    ax.set_xlim(0, horizontal_size)
+    ax.set_ylim(-0.02 / 2, domain_size[2] + 0.02 / 2)
+    ax.set_aspect("equal")
+
+    ax.add_patch(
+        plt.Rectangle(
+            xy=[0, 0],
+            width=domain_size[0],
+            height=d_void,
+            color="gray",
+            linewidth=0,
+        )
+    )
+    ax.add_patch(
+        plt.Rectangle(
+            xy=[0, domain_size[2] - d_void],
+            width=domain_size[0],
+            height=d_void,
+            color="gray",
+            linewidth=0,
+        )
+    )
+
+    for X, R, orientation, depth, boundary in zip(
         fibre_positions,
         fibre_radii,
         fibre_orientations,
-        filename="fibres.pdf",
+        layer_depths,
+        layer_boundaries,
     ):
-        """Visualise the location of the fibres in 2d
-
-        Generate plot of the projection of the fibres onto the XZ and YZ plane. The input is usually
-        created by the generate_fibre_positions() method.
-
-        :arg layer_boundaries: the locations of the boundaries between layers
-        :arg fibre_positions: list with arrays of fibre positions in each vertical layer
-        :arg fibre_radii: list with arrays of fibre radii in each vertical layer
-        :arg fibre_orientations: orientations of fibres
-        """
-        horizontal_size = max(self.domain_size[0], self.domain_size[1])
-        layer_depths = layer_boundaries[1:] - layer_boundaries[:-1]
-        plt.clf()
-        ax = plt.gca()
-        ax.set_xlim(0, horizontal_size)
-        ax.set_ylim(-0.02 / 2, self.domain_size[2] + 0.02 / 2)
-        ax.set_aspect("equal")
-
-        ax.add_patch(
-            plt.Rectangle(
-                xy=[0, 0],
-                width=self.domain_size[0],
-                height=self.d_void,
-                color="gray",
-                linewidth=0,
-            )
-        )
-        ax.add_patch(
-            plt.Rectangle(
-                xy=[0, self.domain_size[2] - self.d_void],
-                width=self.domain_size[0],
-                height=self.d_void,
-                color="gray",
-                linewidth=0,
-            )
-        )
-
-        for X, R, orientation, depth, boundary in zip(
-            fibre_positions,
-            fibre_radii,
-            fibre_orientations,
-            layer_depths,
-            layer_boundaries,
-        ):
-            color = "red" if orientation else "blue"
-            for p, r in zip(X, R):
-                ax.add_patch(
-                    plt.Circle(
-                        p,
-                        r,
-                        color=color,
-                        linewidth=0,
-                    )
-                )
+        color = "red" if orientation else "blue"
+        for p, r in zip(X, R):
             ax.add_patch(
-                plt.Rectangle(
-                    xy=[0, boundary],
-                    width=self.domain_size[orientation],
-                    height=depth,
+                plt.Circle(
+                    p,
+                    r,
                     color=color,
-                    alpha=0.5,
                     linewidth=0,
                 )
             )
-            ax.add_patch(
-                plt.Rectangle(
-                    xy=[self.domain_size[orientation], boundary],
-                    width=horizontal_size - self.domain_size[orientation],
-                    height=depth,
-                    color="white",
-                    linewidth=0,
-                )
+        ax.add_patch(
+            plt.Rectangle(
+                xy=[0, boundary],
+                width=domain_size[orientation],
+                height=depth,
+                color=color,
+                alpha=0.5,
+                linewidth=0,
             )
-        plt.savefig(filename, bbox_inches="tight")
+        )
+        ax.add_patch(
+            plt.Rectangle(
+                xy=[domain_size[orientation], boundary],
+                width=horizontal_size - domain_size[orientation],
+                height=depth,
+                color="white",
+                linewidth=0,
+            )
+        )
+    plt.savefig(filename, bbox_inches="tight")
