@@ -2,13 +2,17 @@
 
 import numpy as np
 from jaxmaterials.distributions_fibres import FibreRadiusDistribution
-from jaxmaterials.data_generator import LayerFibresDataset, visualise_fibres
+from jaxmaterials.data_generator import (
+    LayeredFibresDataset,
+    LayeredFibresDatasetGenerator,
+    visualise_fibres,
+)
 from jaxmaterials.utilities import save_to_vtk
 
 # Domain
 domain_size = [0.5, 0.3, 0.2]
 d_void = 0.01
-N = 16
+N = 8
 number_of_cells = [5 * N, 3 * N, 2 * N]
 
 # Distribution of fibre radii
@@ -23,10 +27,10 @@ radius_distribution = FibreRadiusDistribution(
 # number of layers with fibres
 nlayers = 3
 
-n_samples = 16
+n_samples = 8
 rng = np.random.default_rng(seed=5713853)
 
-dataset = LayerFibresDataset(
+dataset_generator = LayeredFibresDatasetGenerator(
     domain_size,
     number_of_cells,
     nlayers,
@@ -48,7 +52,7 @@ dataset = LayerFibresDataset(
 # Visualise the projected fibre locations for samples
 for k in range(n_samples):
     layer_boundaries, fibre_positions, fibre_radii, fibre_orientations = (
-        dataset.generate_fibre_positions()
+        dataset_generator.generate_fibre_positions()
     )
     visualise_fibres(
         domain_size,
@@ -58,6 +62,12 @@ for k in range(n_samples):
         fibre_orientations,
         filename=f"fibres_{k+1:03d}.pdf",
     )
+
+filename = "fibres.h5"
+dataset_generator.generate()
+dataset_generator.save_hdf5(filename)
+dataset = LayeredFibresDataset(filename)
+
 
 # Save gridded material properties to vtk files
 for k in range(n_samples):

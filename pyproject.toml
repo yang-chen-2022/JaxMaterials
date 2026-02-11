@@ -10,6 +10,7 @@ dependencies = [
     "matplotlib",
     "jax",
     "tqdm",
+    "h5py",
     "pytorch",
 ]
 requires-python = ">=3.12"

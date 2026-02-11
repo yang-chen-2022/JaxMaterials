@@ -1,7 +1,35 @@
 import numpy as np
+from contextlib import contextmanager
+import time
+
+__all__ = ["measure_time", "save_to_vtk"]
+
+
+@contextmanager
+def measure_time(label):
+    """Measure the time it takes to execute a block of code
+
+    :arg label: label for the time measurement
+    """
+    t_start = time.perf_counter()
+    try:
+        yield
+    finally:
+        t_finish = time.perf_counter()
+        t_elapsed = t_finish - t_start
+        print(f"time [{label}] = {t_elapsed:8.2f} s")
 
 
 def save_to_vtk(data, domain_size, filename, location="centre"):
+    """Save fields to VTK file
+
+    :arg data: dictionary of the form {"label":field} where field is an array of
+               shape (N_x,N_y,N_z)
+    :arg domain_size: extent (L_x,L_y,L_z) of domain
+    :arg filename: name of file to save to
+    :arg location: location of data within voxel. Currently only "centre" is supported
+    """
+    assert location == "centre"
     shape = next(iter(data.values())).shape
     nx, ny, nz = shape
     with open(filename, mode="w", encoding="utf8") as f:

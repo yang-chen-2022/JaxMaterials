@@ -1,25 +1,9 @@
 import numpy as np
-from contextlib import contextmanager
-import time
 import jax
 
 from jax import numpy as jnp
-import jax.profiler
 
-
-@contextmanager
-def measure_time(label):
-    """Measure the time it takes to execute a block of code
-
-    :arg label: label for the time measurement
-    """
-    t_start = time.perf_counter()
-    try:
-        yield
-    finally:
-        t_finish = time.perf_counter()
-        t_elapsed = t_finish - t_start
-        print(f"time [{label}] = {t_elapsed:8.2f} s")
+__all__ = ["lippmann_schwinger"]
 
 
 def get_xizero(grid_spec, dtype=jnp.float64):
@@ -272,7 +256,7 @@ def relative_divergence(sigma, grid_spec):
 def lippmann_schwinger(
     lmbda, mu, E_mean, grid_spec, tolerance=1e-8, depth=0, maxiter=32
 ):
-    """Lippmann Schwinger iteration with Anderson acceleration
+    """Lippmann Schwinger iteration with Anderson acceleration for linear elasticity
 
     :arg lmbda: spatially varying Lame parameter lambda
     :arg mu: spatially varying Lame parameter lambda
@@ -341,12 +325,6 @@ def lippmann_schwinger(
         sigma = compute_sigma(lmbda, mu, epsilon[0, ...])
         iter += 1
         return (epsilon, residual, sigma, A_anderson, u_rhs, iter)
-
-    def while_loop(cond_fun, body_fun, init_val):
-        val = init_val
-        while cond_fun(val):
-            val = body_fun(val)
-        return val
 
     epsilon, residual, sigma, A_anderson, u_rhs, iter = jax.lax.while_loop(
         exit_condition,

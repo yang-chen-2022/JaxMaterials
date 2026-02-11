@@ -2,6 +2,7 @@ import numpy as np
 from collections import namedtuple
 from matplotlib import pyplot as plt
 import jax
+from jaxmaterials.utilities import measure_time
 
 # jax.config.update("jax_platform_name", "cpu")
 jax.config.update("jax_enable_x64", True)

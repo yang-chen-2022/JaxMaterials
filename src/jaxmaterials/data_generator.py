@@ -3,16 +3,36 @@ from jax import numpy as jnp
 import numpy as np
 import torch
 import tqdm
+import h5py
 from jaxmaterials.distributions_fibres import (
     FibreDistribution2d,
 )
 from jaxmaterials.linear_elasticity import lippmann_schwinger
 from matplotlib import pyplot as plt
 
-__all__ = ["LayerFibresDataset", "visualise_fibres"]
+__all__ = ["LayeredFibresDataset", "LayeredFibresDatasetGenerator", "visualise_fibres"]
 
 
-class LayerFibresDataset(torch.utils.data.Dataset):
+class LayeredFibresDataset(torch.utils.data.Dataset):
+    def __init__(self, filename):
+        with h5py.File(filename, "r") as f:
+            self._lame_parameters = np.array(f["base/lame_parameters"])
+            self._sigma_bar = np.array(f["base/sigma_bar"])
+            self.domain_size = np.array(f.attrs["domain_size"])
+            self.n_samples = self._lame_parameters.shape[0]
+
+    def __len__(self):
+        """Number of samples"""
+        return self.n_samples
+
+    def __getitem__(self, idx):
+        """Get data
+
+        :arg idx: index"""
+        return self._lame_parameters[idx, ...], self._sigma_bar[idx, ...]
+
+
+class LayeredFibresDatasetGenerator:
     """Dataset of material described by alternating layers of fibres
 
     The domain of size [L_x, L_y, L_z] is vertically divided into two parts:
@@ -77,6 +97,7 @@ class LayerFibresDataset(torch.utils.data.Dataset):
         :arg lambda_void: Lame parameter in void
         :arg dtype: Data type
         """
+        super().__init__()
         # domain
         self.domain_size = domain_size
         self.number_of_cells = number_of_cells
@@ -97,21 +118,25 @@ class LayerFibresDataset(torch.utils.data.Dataset):
         # random number generator and data type
         self.rng = np.random.default_rng(seed=64217) if rng is None else rng
         self.dtype = dtype
+        self.verbose = verbose
+
+    def generate(self):
         # Generate data
         GridSpec = namedtuple("GridSpec", ["N", "h"])
-        self._data = np.empty(
+        self._lame_parameters = np.empty(
             shape=(self.n_samples, 2, *self.number_of_cells), dtype=self.dtype
         )
         self._sigma_bar = np.empty(shape=(self.n_samples, 6, 6), dtype=self.dtype)
         generator_range = range(self.n_samples)
-        if verbose:
+
+        if self.verbose:
             print("Generating data...")
             generator_range = tqdm.tqdm(generator_range)
         for j in generator_range:
             _, fibre_positions, fibre_radii, fibre_orientations = (
                 self.generate_fibre_positions()
             )
-            self._data[j, ...] = self.material_properties(
+            self._lame_parameters[j, ...] = self.material_properties(
                 fibre_positions, fibre_radii, fibre_orientations
             )
 
@@ -121,7 +146,10 @@ class LayerFibresDataset(torch.utils.data.Dataset):
                     np.asarray(self.domain_size) / np.asarray(self.number_of_cells)
                 ),
             )
-            mu, lmbda = self._data[j, 0, ...], self._data[j, 1, ...]
+            mu, lmbda = (
+                self._lame_parameters[j, 0, ...],
+                self._lame_parameters[j, 1, ...],
+            )
             for k in range(6):
                 E_mean = np.zeros(shape=(6,), dtype=self.dtype)
                 E_mean[k] = 1.0
@@ -130,16 +158,6 @@ class LayerFibresDataset(torch.utils.data.Dataset):
                     lmbda, mu, E_mean, grid_spec, tolerance=tolerance
                 )
                 self._sigma_bar[j, k, :] = jnp.mean(sigma, axis=(1, 2, 3))
-
-    def __len__(self):
-        """Number of samples"""
-        return self.n_samples
-
-    def __getitem__(self, idx):
-        """Get data
-
-        :arg idx: index"""
-        return self._data[idx, ...], self._sigma_bar[idx, ...]
 
     def generate_fibre_positions(self):
         """Generate fibre positions and radii in the centre of the domain
@@ -260,6 +278,19 @@ class LayerFibresDataset(torch.utils.data.Dataset):
                         v_fibre - v_material
                     )
         return np.asarray(data)
+
+    def save_hdf5(self, filename):
+        """Save the dataset to disk
+
+        :arg filename: name of file to save to"""
+        assert hasattr(self, "_lame_parameters") and hasattr(
+            self, "_sigma_bar"
+        ), "Data not not generated yet, call generate() first."
+        with h5py.File(filename, "w") as f:
+            group = f.create_group("base")
+            group.create_dataset("lame_parameters", data=self._lame_parameters)
+            group.create_dataset("sigma_bar", data=self._sigma_bar)
+            f.attrs["domain_size"] = self.domain_size
 
 
 def visualise_fibres(
