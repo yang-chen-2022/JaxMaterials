@@ -2,7 +2,7 @@
 
 import numpy as np
 from jaxmaterials.distributions_fibres import FibreRadiusDistribution
-from jaxmaterials.data_generator import (
+from jaxmaterials.data import (
     LayeredFibresDataset,
     LayeredFibresDatasetGenerator,
     visualise_fibres,
@@ -12,7 +12,7 @@ from jaxmaterials.utilities import save_to_vtk
 # Domain
 domain_size = [0.5, 0.3, 0.2]
 d_void = 0.01
-N = 8
+N = 32
 number_of_cells = [5 * N, 3 * N, 2 * N]
 
 # Distribution of fibre radii
