@@ -9,8 +9,27 @@
 #define BLOCKSIZE_Y 8
 #define BLOCKSIZE_Z 8
 
+// maximal domain size in any direction
+#define NMAX 4096
+
 // Convert 3d index to linear index
 #define IDX(Nx, Ny, Nz, i, j, k) ((i) + (Nx) * ((j) + (Ny) * (k)))
+
+// Error checking, as defined in CUDA Programming guide, Section 2.1.7
+#define CUDA_CHECK(expr_to_check)                          \
+    do                                                     \
+    {                                                      \
+        cudaError_t result = expr_to_check;                \
+        if (result != cudaSuccess)                         \
+        {                                                  \
+            fprintf(stderr,                                \
+                    "CUDA Runtime Error: %s:%i:%d = %s\n", \
+                    __FILE__,                              \
+                    __LINE__,                              \
+                    result,                                \
+                    cudaGetErrorString(result));           \
+        }                                                  \
+    } while (0)
 
 /* Specification of grid*/
 struct GridSpec

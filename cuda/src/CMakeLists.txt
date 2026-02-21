@@ -12,16 +12,17 @@ target_sources(LippmannSchwingerLib
     
     PRIVATE        
         common.cc
-        derivatives.cu
+        derivatives.cu        
+        fourier_solve.cu
         lippmann_schwinger.cu
         
     PUBLIC
         FILE_SET HEADERS
         FILES            
             common.hh
-            derivatives.hh
-            lippmann_schwinger.hh            
-            
+            derivatives.hh                        
+            fourier_solve.hh
+            lippmann_schwinger.hh
 )
 
 target_link_libraries(LippmannSchwingerLib

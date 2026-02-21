@@ -3,6 +3,7 @@
 
 #include "common.hh"
 #include "derivatives.hh"
+#include "fourier_solve.hh"
 
 void lippmann_schwinger_solve(const GridSpec grid_spec);
 

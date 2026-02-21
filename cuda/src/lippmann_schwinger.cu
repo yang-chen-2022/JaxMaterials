@@ -5,33 +5,40 @@ void lippmann_schwinger_solve(const GridSpec grid_spec)
   // halo size
 
   int domain_volume = grid_spec.number_of_cells();
+
   // allocate host memory
   float *u = nullptr;
-  float *du_dx = nullptr;
-  float *du_dx_ref = nullptr;
+  float *v = nullptr;
   cudaMallocHost(&u, domain_volume * sizeof(float));
-  cudaMallocHost(&du_dx, domain_volume * sizeof(float));
-  cudaMallocHost(&du_dx_ref, domain_volume * sizeof(float));
-
-  // initialise data
-  init_field(u, grid_spec);
+  cudaMallocHost(&v, domain_volume * sizeof(float));
 
   // allocate device memory
   float *dev_u = nullptr;
-  float *dev_du_dx = nullptr;
+  float *dev_v = nullptr;
+  float *dev_xi_zero_0 = nullptr;
+  float *dev_xi_zero_1 = nullptr;
+  float *dev_xi_zero_2 = nullptr;
   cudaMalloc(&dev_u, domain_volume * sizeof(float));
-  cudaMalloc(&dev_du_dx, domain_volume * sizeof(float));
-
-  cudaMemcpy(dev_u, u, domain_volume * sizeof(float), cudaMemcpyDefault);
-  backward_derivative_device(dev_u, dev_du_dx, 0, grid_spec);
+  cudaMalloc(&dev_v, domain_volume * sizeof(float));
+  cudaMalloc(&dev_xi_zero_0, domain_volume * sizeof(float));
+  cudaMalloc(&dev_xi_zero_1, domain_volume * sizeof(float));
+  cudaMalloc(&dev_xi_zero_2, domain_volume * sizeof(float));
+  initialize_xizero(dev_xi_zero_0, dev_xi_zero_1, dev_xi_zero_2, grid_spec);
   cudaDeviceSynchronize();
-  cudaMemcpy(du_dx, dev_du_dx, domain_volume * sizeof(float), cudaMemcpyDefault);
-  backward_derivative_host(u, du_dx_ref, 0, grid_spec);
-  float rel_diff = relative_difference(du_dx, du_dx_ref, grid_spec);
-  printf("Relative difference = %8.4e\n", rel_diff);
+  fourier_solve(dev_u, dev_v, grid_spec);
+  cudaDeviceSynchronize();
+  cudaMemcpy(u, dev_u, domain_volume * sizeof(float), cudaMemcpyDefault);
+  cudaMemcpy(v, dev_v, domain_volume * sizeof(float), cudaMemcpyDefault);
+  for (int i = 0; i < grid_spec.nx; ++i)
+  {
+    printf("%8.4f ", u[IDX(grid_spec.nx, grid_spec.ny, grid_spec.nz, i, 0, 0)]);
+  }
+  printf("\n");
   cudaFree(dev_u);
-  cudaFree(dev_du_dx);
+  cudaFree(dev_v);
+  cudaFree(dev_xi_zero_0);
+  cudaFree(dev_xi_zero_1);
+  cudaFree(dev_xi_zero_2);
   cudaFreeHost(u);
-  cudaFreeHost(du_dx);
-  cudaFreeHost(du_dx_ref);
+  cudaFreeHost(v);
 }
