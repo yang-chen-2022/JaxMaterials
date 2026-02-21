@@ -13,8 +13,7 @@ protected:
     /** @brief initialise tests */
     void SetUp() override {}
     /** Test */
-    void test_derivative(void (*derivative_device)(float *, float *, const GridSpec),
-                         void (*derivative_host)(float *, float *, const GridSpec))
+    void test_derivative(const int direction)
     {
         float tolerance = 1.E-6;
         // halo size
@@ -45,9 +44,9 @@ protected:
 
         cudaMemcpy(dev_u, u, domain_volume * sizeof(float), cudaMemcpyDefault);
 
-        derivative_device(dev_u, dev_du_dx, grid_spec);
+        backward_derivative_device(dev_u, dev_du_dx, direction, grid_spec);
         cudaDeviceSynchronize();
-        derivative_host(u, du_dx_ref, grid_spec);
+        backward_derivative_host(u, du_dx_ref, direction, grid_spec);
 
         cudaMemcpy(du_dx, dev_du_dx, domain_volume * sizeof(float),
                    cudaMemcpyDefault);
@@ -65,5 +64,19 @@ protected:
  */
 TEST_F(DerivativeTest, TestXDerivative)
 {
-    test_derivative(backward_derivative_x, backward_derivative_x_host);
+    test_derivative(0);
+}
+
+/** @brief Check whether derivative in y-direction is correct
+ */
+TEST_F(DerivativeTest, TestYDerivative)
+{
+    test_derivative(1);
+}
+
+/** @brief Check whether derivative in z-direction is correct
+ */
+TEST_F(DerivativeTest, TestZDerivative)
+{
+    test_derivative(2);
 }

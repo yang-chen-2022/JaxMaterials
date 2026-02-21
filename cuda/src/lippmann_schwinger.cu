@@ -23,10 +23,10 @@ void lippmann_schwinger_solve(const GridSpec grid_spec)
   cudaMalloc(&dev_du_dx, domain_volume * sizeof(float));
 
   cudaMemcpy(dev_u, u, domain_volume * sizeof(float), cudaMemcpyDefault);
-  backward_derivative_x(dev_u, dev_du_dx, grid_spec);
+  backward_derivative_device(dev_u, dev_du_dx, 0, grid_spec);
   cudaDeviceSynchronize();
   cudaMemcpy(du_dx, dev_du_dx, domain_volume * sizeof(float), cudaMemcpyDefault);
-  backward_derivative_x_host(u, du_dx_ref, grid_spec);
+  backward_derivative_host(u, du_dx_ref, 0, grid_spec);
   float rel_diff = relative_difference(du_dx, du_dx_ref, grid_spec);
   printf("Relative difference = %8.4e\n", rel_diff);
   cudaFree(dev_u);
