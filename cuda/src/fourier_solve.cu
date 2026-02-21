@@ -29,6 +29,10 @@ __global__ void initialize_xizero_kernel(float *dev_xi_zero_0,
         float tilde_xi_1 = two_hy_inv * cos(xi_0_half) * sin(xi_1_half) * cos(xi_2_half);
         float tilde_xi_2 = two_hz_inv * cos(xi_0_half) * cos(xi_1_half) * sin(xi_2_half);
         float tilde_xi_nrm = sqrt(tilde_xi_0 * tilde_xi_0 + tilde_xi_1 * tilde_xi_1 + tilde_xi_2 * tilde_xi_2);
+        // Avoid division by zero
+        const float tolerance = 1.E-6;
+        if (tilde_xi_nrm < tolerance)
+            tilde_xi_nrm = 1.0;
         dev_xi_zero_0[IDX(nx, ny, nz, k_a, k_b, k_c)] = tilde_xi_0 / tilde_xi_nrm;
         dev_xi_zero_1[IDX(nx, ny, nz, k_a, k_b, k_c)] = tilde_xi_1 / tilde_xi_nrm;
         dev_xi_zero_2[IDX(nx, ny, nz, k_a, k_b, k_c)] = tilde_xi_1 / tilde_xi_nrm;
