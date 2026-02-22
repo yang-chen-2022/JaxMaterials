@@ -26,10 +26,12 @@
  * @param[out] du: resulting field du/d{x,y,z} (device pointer)
  * @param[in] direction: coordinate direction in which the derivative is taken
  * @param[in] grid_spec: grid specification
+ * @param[in] use_shared_memory use shared memory kernels?
  */
 void backward_derivative_device(float *u, float *du,
                                 const int direction,
-                                const GridSpec grid);
+                                const GridSpec grid_spec,
+                                const bool use_shared_memory = false);
 
 /** @brief Compute backward derivative in arbitrary direction
  *
@@ -42,6 +44,6 @@ void backward_derivative_device(float *u, float *du,
  */
 void backward_derivative_host(float *u, float *du,
                               const int direction,
-                              const GridSpec grid);
+                              const GridSpec grid_spec);
 
 #endif // DERIVATIVES_HH

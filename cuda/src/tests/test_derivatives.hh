@@ -13,7 +13,7 @@ protected:
     /** @brief initialise tests */
     void SetUp() override {}
     /** Test */
-    void test_derivative(const int direction)
+    void test_derivative(const int direction, const bool use_shared_memory)
     {
         float tolerance = 1.E-6;
         // halo size
@@ -44,7 +44,7 @@ protected:
 
         cudaMemcpy(dev_u, u, domain_volume * sizeof(float), cudaMemcpyDefault);
 
-        backward_derivative_device(dev_u, dev_du_dx, direction, grid_spec);
+        backward_derivative_device(dev_u, dev_du_dx, direction, grid_spec, use_shared_memory);
         cudaDeviceSynchronize();
         backward_derivative_host(u, du_dx_ref, direction, grid_spec);
 
@@ -64,19 +64,40 @@ protected:
  */
 TEST_F(DerivativeTest, TestXDerivative)
 {
-    test_derivative(0);
+    test_derivative(0, false);
 }
 
 /** @brief Check whether derivative in y-direction is correct
  */
 TEST_F(DerivativeTest, TestYDerivative)
 {
-    test_derivative(1);
+    test_derivative(1, false);
 }
 
 /** @brief Check whether derivative in z-direction is correct
  */
 TEST_F(DerivativeTest, TestZDerivative)
 {
-    test_derivative(2);
+    test_derivative(2, false);
+}
+
+/** @brief Check whether derivative in x-direction is correct
+ */
+TEST_F(DerivativeTest, TestXDerivativeShared)
+{
+    test_derivative(0, true);
+}
+
+/** @brief Check whether derivative in y-direction is correct
+ */
+TEST_F(DerivativeTest, TestYDerivativeShared)
+{
+    test_derivative(1, true);
+}
+
+/** @brief Check whether derivative in z-direction is correct
+ */
+TEST_F(DerivativeTest, TestZDerivativeShared)
+{
+    test_derivative(2, true);
 }

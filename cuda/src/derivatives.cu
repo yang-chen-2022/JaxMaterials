@@ -1,6 +1,98 @@
 #include "derivatives.hh"
 /** @brief implementation of derivatives.hh */
 
+/* ********************************** *
+ *    naive CUDA kernels              *
+ * ********************************** */
+
+/* Kernel for backward derivative computation in x-direction */
+__global__ void backward_derivative_x_kernel(float *u, float *du_dx,
+                                             const GridSpec grid_spec)
+{
+  float h_inv = grid_spec.nx / grid_spec.Lx;
+  int nx = grid_spec.nx;
+  int ny = grid_spec.ny;
+  int nz = grid_spec.nz;
+  int a = blockDim.x * blockIdx.x + threadIdx.x;
+  int b = blockDim.y * blockIdx.y + threadIdx.y;
+  int c = blockDim.z * blockIdx.z + threadIdx.z;
+  if ((a < nx) && (b < ny) && (c < nz))
+  {
+    float _du_dx = 0;
+    // apply derivative
+    _du_dx += u[IDX(nx, ny, nz, a, b, c)];
+    _du_dx += u[IDX(nx, ny, nz, a, (b - 1 + ny) % ny, c)];
+    _du_dx += u[IDX(nx, ny, nz, a, b, (c - 1 + nz) % nz)];
+    _du_dx += u[IDX(nx, ny, nz, a, (b - 1 + ny) % ny, (c - 1 + nz) % nz)];
+    _du_dx -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, b, c)];
+    _du_dx -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, (b - 1 + ny) % ny, c)];
+    _du_dx -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, b, (c - 1 + nz) % nz)];
+    _du_dx -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, (b - 1 + ny) % ny, (c - 1 + nz) % nz)];
+    //  Copy back to global memory
+    du_dx[IDX(nx, ny, nz, a, b, c)] = 0.25 * h_inv * _du_dx;
+  }
+}
+
+/* Kernel for backward derivative computation in y-direction */
+__global__ void backward_derivative_y_kernel(float *u, float *du_dy,
+                                             const GridSpec grid_spec)
+{
+  float h_inv = grid_spec.ny / grid_spec.Ly;
+  int nx = grid_spec.nx;
+  int ny = grid_spec.ny;
+  int nz = grid_spec.nz;
+  int a = blockDim.x * blockIdx.x + threadIdx.x;
+  int b = blockDim.y * blockIdx.y + threadIdx.y;
+  int c = blockDim.z * blockIdx.z + threadIdx.z;
+  if ((a < nx) && (b < ny) && (c < nz))
+  {
+    float _du_dy = 0;
+    // apply derivative
+    _du_dy += u[IDX(nx, ny, nz, a, b, c)];
+    _du_dy += u[IDX(nx, ny, nz, (a - 1 + nx) % nx, b, c)];
+    _du_dy += u[IDX(nx, ny, nz, a, b, (c - 1 + nz) % nz)];
+    _du_dy += u[IDX(nx, ny, nz, (a - 1 + nx) % nx, b, (c - 1 + nz) % nz)];
+    _du_dy -= u[IDX(nx, ny, nz, a, (b - 1 + ny) % ny, c)];
+    _du_dy -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, (b - 1 + ny) % ny, c)];
+    _du_dy -= u[IDX(nx, ny, nz, a, (b - 1 + ny) % ny, (c - 1 + nz) % nz)];
+    _du_dy -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, (b - 1 + ny) % ny, (c - 1 + nz) % nz)];
+    //  Copy back to global memory
+    du_dy[IDX(nx, ny, nz, a, b, c)] = 0.25 * h_inv * _du_dy;
+  }
+}
+
+/* Kernel for backward derivative computation in y-direction */
+__global__ void backward_derivative_z_kernel(float *u, float *du_dz,
+                                             const GridSpec grid_spec)
+{
+  float h_inv = grid_spec.nz / grid_spec.Lz;
+  int nx = grid_spec.nx;
+  int ny = grid_spec.ny;
+  int nz = grid_spec.nz;
+  int a = blockDim.x * blockIdx.x + threadIdx.x;
+  int b = blockDim.y * blockIdx.y + threadIdx.y;
+  int c = blockDim.z * blockIdx.z + threadIdx.z;
+  if ((a < nx) && (b < ny) && (c < nz))
+  {
+    float _du_dz = 0;
+    // apply derivative
+    _du_dz += u[IDX(nx, ny, nz, a, b, c)];
+    _du_dz += u[IDX(nx, ny, nz, (a - 1 + nx) % nx, b, c)];
+    _du_dz += u[IDX(nx, ny, nz, a, (b - 1 + ny) % ny, c)];
+    _du_dz += u[IDX(nx, ny, nz, (a - 1 + nx) % nx, (b - 1 + ny) % ny, c)];
+    _du_dz -= u[IDX(nx, ny, nz, a, b, (c - 1 + nz) % nz)];
+    _du_dz -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, b, (c - 1 + nz) % nz)];
+    _du_dz -= u[IDX(nx, ny, nz, a, (b - 1 + ny) % ny, (c - 1 + nz) % nz)];
+    _du_dz -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, (b - 1 + ny) % ny, (c - 1 + nz) % nz)];
+    //  Copy back to global memory
+    du_dz[IDX(nx, ny, nz, a, b, c)] = 0.25 * h_inv * _du_dz;
+  }
+}
+
+/* ********************************** *
+ *    shared memory CUDA kernels      *
+ * ********************************** */
+
 /* Copy data into shared memory patch which allows accessing u_{a,b,c} with
  * -1 <= a < nx, -1 <= b < ny, -1 <= c < nz. This allows the computation of
  * all backward derivatives.
@@ -52,8 +144,8 @@ __device__ void copy_patch_into_shared_memory(float *u, float *u_shared,
 }
 
 /* Kernel for backward derivative computation in x-direction */
-__global__ void backward_derivative_x_kernel(float *u, float *du_dx,
-                                             const GridSpec grid_spec)
+__global__ void backward_derivative_x_kernel_shared(float *u, float *du_dx,
+                                                    const GridSpec grid_spec)
 {
   float h_inv = grid_spec.nx / grid_spec.Lx;
   int nx = grid_spec.nx;
@@ -92,8 +184,8 @@ __global__ void backward_derivative_x_kernel(float *u, float *du_dx,
 }
 
 /* Kernel for backward derivative computation in y-direction */
-__global__ void backward_derivative_y_kernel(float *u, float *du_dy,
-                                             const GridSpec grid_spec)
+__global__ void backward_derivative_y_kernel_shared(float *u, float *du_dy,
+                                                    const GridSpec grid_spec)
 {
   float h_inv = grid_spec.ny / grid_spec.Ly;
   int nx = grid_spec.nx;
@@ -132,8 +224,8 @@ __global__ void backward_derivative_y_kernel(float *u, float *du_dy,
 }
 
 /* Kernel for backward derivative computation in y-direction */
-__global__ void backward_derivative_z_kernel(float *u, float *du_dz,
-                                             const GridSpec grid_spec)
+__global__ void backward_derivative_z_kernel_shared(float *u, float *du_dz,
+                                                    const GridSpec grid_spec)
 {
   float h_inv = grid_spec.nz / grid_spec.Lz;
   int nx = grid_spec.nx;
@@ -171,10 +263,15 @@ __global__ void backward_derivative_z_kernel(float *u, float *du_dz,
   }
 }
 
+/* ********************************** *
+ *    wrappers on host and device     *
+ * ********************************** */
+
 /* Launch backward derivative computation */
 void backward_derivative_device(float *dev_u, float *dev_du,
                                 const int direction,
-                                const GridSpec grid_spec)
+                                const GridSpec grid_spec,
+                                bool use_shared_memory)
 {
   int nx = grid_spec.nx;
   int ny = grid_spec.ny;
@@ -183,14 +280,28 @@ void backward_derivative_device(float *dev_u, float *dev_du,
             (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
             (nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z);
   dim3 block(BLOCKSIZE_X, BLOCKSIZE_Y, BLOCKSIZE_Z);
-  if (direction == 0)
-    backward_derivative_x_kernel<<<grid, block>>>(dev_u, dev_du, grid_spec);
-  else if (direction == 1)
-    backward_derivative_y_kernel<<<grid, block>>>(dev_u, dev_du, grid_spec);
-  else if (direction == 2)
-    backward_derivative_z_kernel<<<grid, block>>>(dev_u, dev_du, grid_spec);
+  if (use_shared_memory)
+  {
+    if (direction == 0)
+      backward_derivative_x_kernel_shared<<<grid, block>>>(dev_u, dev_du, grid_spec);
+    else if (direction == 1)
+      backward_derivative_y_kernel_shared<<<grid, block>>>(dev_u, dev_du, grid_spec);
+    else if (direction == 2)
+      backward_derivative_z_kernel_shared<<<grid, block>>>(dev_u, dev_du, grid_spec);
+    else
+      throw std::runtime_error("Invalid direction");
+  }
   else
-    throw std::runtime_error("Invalid direction");
+  {
+    if (direction == 0)
+      backward_derivative_x_kernel<<<grid, block>>>(dev_u, dev_du, grid_spec);
+    else if (direction == 1)
+      backward_derivative_y_kernel<<<grid, block>>>(dev_u, dev_du, grid_spec);
+    else if (direction == 2)
+      backward_derivative_z_kernel<<<grid, block>>>(dev_u, dev_du, grid_spec);
+    else
+      throw std::runtime_error("Invalid direction");
+  }
 }
 
 /* Compute backward derivative on host */
