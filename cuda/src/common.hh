@@ -5,16 +5,22 @@
 #include <math.h>
 #include <stdio.h>
 
-// Block size used for kernel launches
+// Block size used for 3d kernel launches
 #define BLOCKSIZE_X 8
 #define BLOCKSIZE_Y 8
 #define BLOCKSIZE_Z 8
+
+// Block size used for 1d kernel launches
+#define BLOCKSIZE 1024
 
 // maximal domain size in any direction
 #define NMAX 4096
 
 // Convert 3d index to linear index
 #define IDX(Nx, Ny, Nz, i, j, k) ((i) + (Nx) * ((j) + (Ny) * (k)))
+// Convert (1+3)d index to linear index
+#define FIDX(Nx, Ny, Nz, mu, i, j, k)                                          \
+  ((i) + (Nx) * ((j) + (Ny) * ((k) + (Nz) * (mu))))
 
 // Error checking, as defined in CUDA Programming guide, Section 2.1.7
 #define CUDA_CHECK(expr_to_check)                                              \
@@ -58,8 +64,8 @@ void init_field(float *u, const GridSpec grid_spec);
  *
  * @param[out] u: field (host pointer)
  * @param[out] u_ref: reference field to compare to (host pointer)
- * @param[in] grid_spec: Grid specification
+ * @param[in] ndof number of unknowns
  */
-float relative_difference(float *u, float *u_ref, const GridSpec grid_spec);
+float relative_difference(float *u, float *u_ref, const int ndof);
 
 #endif // COMMON_HH
