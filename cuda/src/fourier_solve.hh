@@ -1,5 +1,6 @@
 #ifndef FOURIER_SOLVE_HH
 #define FOURIER_SOLVE_HH FOURIER_SOLVE_HH
+#include "cufft.h"
 #include "common.hh"
 
 /** @brief Construct Fourier vectors ring{tilde{xi}}_j on device
@@ -46,7 +47,7 @@ void initialize_xizero_host(float *xi_zero, const GridSpec grid_spec);
  * @param[in] mu_0 Lame parameter mu_0 of reference material
  * @param[in] grid_spec Grid specification
  */
-void fourier_solve_device(float *dev_tau_hat, float *dev_epsilon_hat,
+void fourier_solve_device(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_hat,
                           float *dev_xi_zero, const float lambda_0,
                           const float mu_0, const GridSpec grid_spec);
 

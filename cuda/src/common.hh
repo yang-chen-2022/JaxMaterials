@@ -32,6 +32,16 @@
     }                                                                          \
   } while (0)
 
+// Corresponding cuFFT error checking
+#define CUFFT_CHECK(expr_to_check)                                             \
+  do {                                                                         \
+    cufftResult_t result = expr_to_check;                                      \
+    if (result != CUFFT_SUCCESS) {                                             \
+      fprintf(stderr, "cuFFT Runtime Error: %s:%i:%d\n", __FILE__, __LINE__,   \
+              result);                                                         \
+    }                                                                          \
+  } while (0)
+
 /** @brief Specification of computational grid
  *
  * Describes grid of the domain Lx x Ly x Lz with nx, ny, nz grid cells

@@ -78,14 +78,15 @@ void initialize_xizero_host(float *xi_zero,
 }
 
 /* kernel for Fourier solve in homogeneous isotropic reference material */
-__global__ void fourier_solve_kernel(float *dev_tau_hat, float *dev_epsilon_hat, float *dev_xi_zero,
+__global__ void fourier_solve_kernel(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_hat,
+                                     float *dev_xi_zero,
                                      const float C_A, const float C_B,
                                      const int ncells)
 {
     int ell = blockDim.x * blockIdx.x + threadIdx.x;
     float xi[3];
-    float tau_hat[6];
-    float epsilon_hat[6];
+    cufftComplex tau_hat[6];
+    cufftComplex epsilon_hat[6];
     if (ell < ncells)
     {
         // copy into temporary arrays
@@ -93,21 +94,37 @@ __global__ void fourier_solve_kernel(float *dev_tau_hat, float *dev_epsilon_hat,
             xi[mu] = dev_xi_zero[mu * ncells + ell];
         for (int mu = 0; mu < 6; ++mu)
             tau_hat[mu] = dev_tau_hat[mu * ncells + ell];
-        float rho = xi[0] * xi[0] * tau_hat[0] +
-                    xi[1] * xi[1] * tau_hat[1] +
-                    xi[2] * xi[2] * tau_hat[2] +
-                    2 * (xi[1] * xi[2] * tau_hat[3] +
-                         xi[0] * xi[2] * tau_hat[4] +
-                         xi[0] * xi[1] * tau_hat[5]);
-        epsilon_hat[0] = C_A * xi[0] * (xi[0] * tau_hat[0] + xi[2] * tau_hat[4] + xi[1] * tau_hat[5]) +
-                         C_B * rho * xi[0] * xi[0];
-        epsilon_hat[1] = C_A * xi[1] * (xi[1] * tau_hat[1] + xi[2] * tau_hat[3] + xi[0] * tau_hat[5]) +
-                         C_B * rho * xi[1] * xi[1];
-        epsilon_hat[2] = C_A * xi[2] * (xi[2] * tau_hat[2] + xi[1] * tau_hat[3] + xi[0] * tau_hat[4]) +
-                         C_B * rho * xi[2] * xi[2];
-        epsilon_hat[3] = 0.5 * C_A * (xi[1] * xi[2] * (tau_hat[1] + tau_hat[2]) + (xi[1] * xi[1] + xi[2] * xi[2]) * tau_hat[3] + xi[0] * (xi[1] * tau_hat[4] + xi[2] * tau_hat[5])) + C_B * rho * xi[1] * xi[2];
-        epsilon_hat[4] = 0.5 * C_A * (xi[0] * xi[2] * (tau_hat[0] + tau_hat[2]) + (xi[0] * xi[0] + xi[2] * xi[2]) * tau_hat[4] + xi[1] * (xi[0] * tau_hat[3] + xi[2] * tau_hat[5])) + C_B * rho * xi[0] * xi[2];
-        epsilon_hat[5] = 0.5 * C_A * (xi[0] * xi[1] * (tau_hat[0] + tau_hat[1]) + (xi[0] * xi[0] + xi[1] * xi[1]) * tau_hat[5] + xi[2] * (xi[0] * tau_hat[3] + xi[1] * tau_hat[4])) + C_B * rho * xi[0] * xi[1];
+        cufftComplex rho;
+        rho.x = xi[0] * xi[0] * tau_hat[0].x +
+                xi[1] * xi[1] * tau_hat[1].x +
+                xi[2] * xi[2] * tau_hat[2].x +
+                2 * (xi[1] * xi[2] * tau_hat[3].x +
+                     xi[0] * xi[2] * tau_hat[4].x +
+                     xi[0] * xi[1] * tau_hat[5].x);
+        rho.y = xi[0] * xi[0] * tau_hat[0].y +
+                xi[1] * xi[1] * tau_hat[1].y +
+                xi[2] * xi[2] * tau_hat[2].y +
+                2 * (xi[1] * xi[2] * tau_hat[3].y +
+                     xi[0] * xi[2] * tau_hat[4].y +
+                     xi[0] * xi[1] * tau_hat[5].y);
+        epsilon_hat[0].x = C_A * xi[0] * (xi[0] * tau_hat[0].x + xi[2] * tau_hat[4].x + xi[1] * tau_hat[5].x) +
+                           C_B * rho.x * xi[0] * xi[0];
+        epsilon_hat[0].y = C_A * xi[0] * (xi[0] * tau_hat[0].y + xi[2] * tau_hat[4].y + xi[1] * tau_hat[5].y) +
+                           C_B * rho.y * xi[0] * xi[0];
+        epsilon_hat[1].x = C_A * xi[1] * (xi[1] * tau_hat[1].x + xi[2] * tau_hat[3].x + xi[0] * tau_hat[5].x) +
+                           C_B * rho.x * xi[1] * xi[1];
+        epsilon_hat[1].y = C_A * xi[1] * (xi[1] * tau_hat[1].y + xi[2] * tau_hat[3].y + xi[0] * tau_hat[5].y) +
+                           C_B * rho.y * xi[1] * xi[1];
+        epsilon_hat[2].x = C_A * xi[2] * (xi[2] * tau_hat[2].x + xi[1] * tau_hat[3].x + xi[0] * tau_hat[4].x) +
+                           C_B * rho.x * xi[2] * xi[2];
+        epsilon_hat[2].y = C_A * xi[2] * (xi[2] * tau_hat[2].y + xi[1] * tau_hat[3].y + xi[0] * tau_hat[4].y) +
+                           C_B * rho.y * xi[2] * xi[2];
+        epsilon_hat[3].x = 0.5 * C_A * (xi[1] * xi[2] * (tau_hat[1].x + tau_hat[2].x) + (xi[1] * xi[1] + xi[2] * xi[2]) * tau_hat[3].x + xi[0] * (xi[1] * tau_hat[4].x + xi[2] * tau_hat[5].x)) + C_B * rho.x * xi[1] * xi[2];
+        epsilon_hat[3].y = 0.5 * C_A * (xi[1] * xi[2] * (tau_hat[1].y + tau_hat[2].y) + (xi[1] * xi[1] + xi[2] * xi[2]) * tau_hat[3].y + xi[0] * (xi[1] * tau_hat[4].y + xi[2] * tau_hat[5].y)) + C_B * rho.y * xi[1] * xi[2];
+        epsilon_hat[4].x = 0.5 * C_A * (xi[0] * xi[2] * (tau_hat[0].x + tau_hat[2].x) + (xi[0] * xi[0] + xi[2] * xi[2]) * tau_hat[4].x + xi[1] * (xi[0] * tau_hat[3].x + xi[2] * tau_hat[5].x)) + C_B * rho.x * xi[0] * xi[2];
+        epsilon_hat[4].y = 0.5 * C_A * (xi[0] * xi[2] * (tau_hat[0].y + tau_hat[2].y) + (xi[0] * xi[0] + xi[2] * xi[2]) * tau_hat[4].y + xi[1] * (xi[0] * tau_hat[3].y + xi[2] * tau_hat[5].y)) + C_B * rho.y * xi[0] * xi[2];
+        epsilon_hat[5].x = 0.5 * C_A * (xi[0] * xi[1] * (tau_hat[0].x + tau_hat[1].x) + (xi[0] * xi[0] + xi[1] * xi[1]) * tau_hat[5].x + xi[2] * (xi[0] * tau_hat[3].x + xi[1] * tau_hat[4].x)) + C_B * rho.x * xi[0] * xi[1];
+        epsilon_hat[5].y = 0.5 * C_A * (xi[0] * xi[1] * (tau_hat[0].y + tau_hat[1].y) + (xi[0] * xi[0] + xi[1] * xi[1]) * tau_hat[5].y + xi[2] * (xi[0] * tau_hat[3].y + xi[1] * tau_hat[4].y)) + C_B * rho.y * xi[0] * xi[1];
         // copy back into solution vector
         for (int mu = 0; mu < 6; ++mu)
             dev_epsilon_hat[mu * ncells + ell] = epsilon_hat[mu];
@@ -115,7 +132,8 @@ __global__ void fourier_solve_kernel(float *dev_tau_hat, float *dev_epsilon_hat,
 }
 
 /* Fourier solve for homogeneous isotropic reference material */
-void fourier_solve_device(float *dev_tau_hat, float *dev_epsilon_hat, float *dev_xi_zero,
+void fourier_solve_device(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_hat,
+                          float *dev_xi_zero,
                           const float lambda_0, const float mu_0,
                           const GridSpec grid_spec)
 {

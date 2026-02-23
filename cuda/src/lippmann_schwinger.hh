@@ -1,6 +1,8 @@
 #ifndef LIPPMANN_SCHWINGER_HH
 #define LIPPMANN_SCHWINGER_HH LIPPMANN_SCHWINGER_HH
 
+#include <algorithm>
+#include "cufft.h"
 #include "common.hh"
 #include "derivatives.hh"
 #include "fourier_solve.hh"
@@ -14,14 +16,25 @@
  *
  * @param[in] dev_epsilon strain epsilon in real space (device array, size 6*ncells)
  * @param[out] dev_sigma resulting stress sigma in real space (device array, size 6*ncells)
- * @param[in] dev_lambda Lame parameter lambda (device array, size 6*ncells)
- * @param[in] dev_mu Lame parameter mu (device array, size 6*ncells)
+ * @param[in] dev_lambda Lame parameter lambda (device array, size ncells)
+ * @param[in] dev_mu Lame parameter mu (device array, size ncells)
  * @param[in] grid_spec Specification of computational grid
  */
 void compute_stress(float *dev_epsilon, float *dev_sigma,
                     float *dev_lambda, float *dev_mu,
                     const GridSpec grid_spec);
 
-void lippmann_schwinger_solve(const GridSpec grid_spec);
+/** @brief Solve linear elasticity problem with Lippmann-Schwinger iteration
+ *
+ * @param[in] lambda Lame parameter lambda (host array, size ncells)
+ * @param[in] mu Lame parameter mu (host array, size ncells)
+ * @param[in] epsilon_bar average value of epsilon (host array, size 6)
+ * @param[out] epsilon Resulting strain (host array, size 6*ncells)
+ * @param[out] sigma Resulting stress (host array, size 6*ncells)
+ * @param[in] grid_spec Specification of computational grid
+ */
+void lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
+                              float *epsilon, float *sigma,
+                              const GridSpec grid_spec);
 
 #endif // LIPPMANN_SCHWINGER_HH

@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 enable_language(CUDA)
+find_package(CUDAToolkit)
 
 # All code is in the src subdirectory
 add_subdirectory(src)

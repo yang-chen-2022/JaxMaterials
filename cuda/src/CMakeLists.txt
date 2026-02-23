@@ -30,6 +30,7 @@ target_sources(LippmannSchwingerLib
 # Link against google test
 target_link_libraries(LippmannSchwingerLib
     PRIVATE
+        CUDA::cufft
         GTest::gtest_main         
 )
 
