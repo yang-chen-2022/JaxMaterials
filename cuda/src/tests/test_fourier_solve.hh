@@ -101,32 +101,46 @@ TEST_F(FourierSolveTest, TestDivSigma)
   // Solve on device and copy back
   fourier_solve(dev_tau_hat, dev_epsilon_hat, dev_xi_zero,
                 lambda_0, mu_0, grid_spec);
+  CUDA_CHECK(cudaDeviceSynchronize());
   CUDA_CHECK(cudaMemcpy(epsilon_hat, dev_epsilon_hat, 6 * ncells * sizeof(float), cudaMemcpyDefault));
+  float sigma_nrm2 = 0;
   float div_nrm2 = 0;
   for (int ell = 0; ell < ncells; ++ell)
   {
     float xi[3];
+    float xi_sigma[3];
     float tau[6];
     float epsilon[6];
+    float sigma[6];
     for (int mu = 0; mu < 3; ++mu)
       xi[mu] = xi_zero[mu * ncells + ell];
+
     for (int mu = 0; mu < 6; ++mu)
     {
       tau[mu] = tau_hat[mu * ncells + ell];
       epsilon[mu] = epsilon_hat[mu * ncells + ell];
     }
 
-    float tr_epsilon_hat = epsilon[0] + epsilon[1] + epsilon[2];
-    float xi_sigma_0 = xi[0] * (2 * mu_0 * epsilon[0] + lambda_0 * tr_epsilon_hat) +
-                       2 * mu_0 * (xi[1] * tau[5] + xi[2] * tau[4]);
-    float xi_sigma_1 = xi[1] * (2 * mu_0 * epsilon[1] + lambda_0 * tr_epsilon_hat) +
-                       2 * mu_0 * (xi[0] * tau[5] + xi[2] * tau[3]);
-    float xi_sigma_2 = xi[2] * (2 * mu_0 * epsilon[2] + lambda_0 * tr_epsilon_hat) +
-                       2 * mu_0 * (xi[0] * tau[4] + xi[1] * tau[3]);
-    div_nrm2 += xi_sigma_0 * xi_sigma_0 + xi_sigma_1 * xi_sigma_1 + xi_sigma_2 * xi_sigma_2;
-  }
+    float tr_epsilon = epsilon[0] + epsilon[1] + epsilon[2];
 
-  printf("||div(sigma)|| = %8.4e\n", sqrt(div_nrm2));
+    sigma[0] = tau[0] + 2 * mu_0 * epsilon[0] + lambda_0 * tr_epsilon;
+    sigma[1] = tau[1] + 2 * mu_0 * epsilon[1] + lambda_0 * tr_epsilon;
+    sigma[2] = tau[2] + 2 * mu_0 * epsilon[2] + lambda_0 * tr_epsilon;
+    sigma[3] = tau[3] + 2 * mu_0 * epsilon[3];
+    sigma[4] = tau[4] + 2 * mu_0 * epsilon[4];
+    sigma[5] = tau[5] + 2 * mu_0 * epsilon[5];
+
+    xi_sigma[0] = xi[0] * sigma[0] + xi[1] * sigma[5] + xi[2] * sigma[4];
+    xi_sigma[1] = xi[0] * sigma[5] + xi[1] * sigma[1] + xi[2] * sigma[3];
+    xi_sigma[2] = xi[0] * sigma[4] + xi[1] * sigma[3] + xi[2] * sigma[2];
+    for (int mu = 0; mu < 3; ++mu)
+      div_nrm2 += xi_sigma[mu] * xi_sigma[mu];
+    for (int mu = 0; mu < 6; ++mu)
+    {
+      sigma_nrm2 += sigma[mu] * sigma[mu];
+    }
+  }
+  float rel_diff = sqrt(div_nrm2 / sigma_nrm2);
   // free memory
   CUDA_CHECK(cudaFree(dev_xi_zero));
   CUDA_CHECK(cudaFree(dev_tau_hat));
@@ -134,6 +148,8 @@ TEST_F(FourierSolveTest, TestDivSigma)
   CUDA_CHECK(cudaFreeHost(xi_zero));
   CUDA_CHECK(cudaFreeHost(tau_hat));
   CUDA_CHECK(cudaFreeHost(epsilon_hat));
+  float tolerance = 1.E-6;
+  EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
 
 #endif // TEST_FOURIER_SOLVE_HH
