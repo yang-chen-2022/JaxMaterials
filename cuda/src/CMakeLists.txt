@@ -41,7 +41,7 @@ target_link_libraries(driver
 )
 target_sources(driver
     PRIVATE
-        driver.cc
+        driver.cu
 )
 set_target_properties(driver PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ../bin)
