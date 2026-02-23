@@ -58,6 +58,7 @@ void increment_solution(float *dev_epsilon, cufftComplex *dev_r,
   increment_solution_kernel<<<nblocks, BLOCKSIZE>>>(dev_epsilon, dev_r, ndof);
 }
 
+/* Lippmann Schwinger iteration */
 void lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
                               float *epsilon, float *sigma,
                               const GridSpec grid_spec)
@@ -73,12 +74,12 @@ void lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
   float lambda_0 = 0.5 * (*std::max_element(lambda, lambda + ncells) + *std::min_element(lambda, lambda + ncells));
   float mu_0 = 0.5 * (*std::min_element(lambda, lambda + ncells) + *std::min_element(mu, mu + ncells));
   // allocate device memory
-  float *dev_lambda = nullptr;
-  float *dev_mu = nullptr;
-  float *dev_epsilon = nullptr;
-  float *dev_sigma = nullptr;
-  cufftComplex *dev_sigma_hat = nullptr;
-  cufftComplex *dev_residual = nullptr;
+  float *dev_lambda = nullptr;           // Lame parameter lamba on device
+  float *dev_mu = nullptr;               // Lame parameter mu on device
+  float *dev_epsilon = nullptr;          // real-valued strain epsilon on device
+  float *dev_sigma = nullptr;            // real-valued stress sigma on device
+  cufftComplex *dev_sigma_hat = nullptr; // complex-valued Fourier-stress on device
+  cufftComplex *dev_residual = nullptr;  // complex-valued residual on device
   float *dev_xi_zero = nullptr;
   CUDA_CHECK(cudaMalloc(&dev_xi_zero, 3 * ncells * sizeof(float)));
   CUDA_CHECK(cudaMalloc(&dev_lambda, 6 * ncells * sizeof(float)));
@@ -97,7 +98,7 @@ void lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
   initialize_xizero(dev_xi_zero, grid_spec);
   CUDA_CHECK(cudaDeviceSynchronize());
 
-  // main loop
+  // main Lippmann-Schwinger loop
   const int maxiter = 10;
   for (int iter = 0; iter < maxiter; ++iter)
   {

@@ -67,13 +67,17 @@ TEST_F(FourierSolveTest, TestXiZero)
  *     C^0_{ijkl} = lambda^0 (delta_{ij}delta_{kl}
  *                + mu^0 (delta_{ik}delta_{jl} + delta_{il}delta_{jk}))
  *
+ * This test checks that div(sigma^0) = 0 in Fourier space.
+ *
  * and given, random tau
  */
 TEST_F(FourierSolveTest, TestDivSigma)
 {
+  // random number generator
   std::default_random_engine rng(7812481);
   std::normal_distribution<float> distribution(0, 1);
   int ncells = grid_spec.number_of_cells();
+  // Lame parameters
   const float lambda_0 = 0.8;
   const float mu_0 = 1.3;
   // allocate memory
@@ -98,12 +102,13 @@ TEST_F(FourierSolveTest, TestDivSigma)
   initialize_xizero_host(xi_zero, grid_spec);
   initialize_xizero(dev_xi_zero, grid_spec);
 
-  // Initialize with random numbers
+  // Initialize tau with random numbers
   std::generate(tau, tau + 6 * ncells, [&]()
                 { return distribution(rng); });
   CUDA_CHECK(cudaMemset(dev_tau, 0, 6 * ncells * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMemcpy2D(dev_tau, 2 * sizeof(float), tau, sizeof(float), sizeof(float), 6 * ncells, cudaMemcpyDefault));
 
+  // Fourier transform the real-valued tau
   cufftHandle plan;
   int n[3] = {grid_spec.nz, grid_spec.ny, grid_spec.nx};
   CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, ncells, n, 1, ncells, CUFFT_C2C, 6));
@@ -118,6 +123,7 @@ TEST_F(FourierSolveTest, TestDivSigma)
   CUDA_CHECK(cudaMemcpy(tau_hat, dev_tau_hat, 6 * ncells * sizeof(cufftComplex), cudaMemcpyDefault));
   float sigma_nrm2 = 0;
   float div_nrm2 = 0;
+  // Compute ||div(sigma^0)||^2 and ||sigma^0||^2 in Fourier space
   for (int ell = 0; ell < ncells; ++ell)
   {
     float xi[3];
@@ -134,10 +140,12 @@ TEST_F(FourierSolveTest, TestDivSigma)
       epsilon[mu] = epsilon_hat[mu * ncells + ell];
     }
 
+    // trace of epsilon
     cufftComplex tr_epsilon;
     tr_epsilon.x = epsilon[0].x + epsilon[1].x + epsilon[2].x;
     tr_epsilon.y = epsilon[0].y + epsilon[1].y + epsilon[2].y;
 
+    // compute sigma
     for (int alpha = 0; alpha < 6; ++alpha)
     {
       sigma[alpha].x = tau[alpha].x + 2 * mu_0 * epsilon[alpha].x;
@@ -149,17 +157,23 @@ TEST_F(FourierSolveTest, TestDivSigma)
       }
     }
 
+    // Compute three components of dot-product xi.sigma
     xi_sigma[0].x = xi[0] * sigma[0].x + xi[1] * sigma[5].x + xi[2] * sigma[4].x;
     xi_sigma[0].y = xi[0] * sigma[0].y + xi[1] * sigma[5].y + xi[2] * sigma[4].y;
     xi_sigma[1].x = xi[0] * sigma[5].x + xi[1] * sigma[1].x + xi[2] * sigma[3].x;
     xi_sigma[1].y = xi[0] * sigma[5].y + xi[1] * sigma[1].y + xi[2] * sigma[3].y;
     xi_sigma[2].x = xi[0] * sigma[4].x + xi[1] * sigma[3].x + xi[2] * sigma[2].x;
     xi_sigma[2].y = xi[0] * sigma[4].y + xi[1] * sigma[3].y + xi[2] * sigma[2].y;
+    // update (squared) norms
     for (int mu = 0; mu < 3; ++mu)
       div_nrm2 += xi_sigma[mu].x * xi_sigma[mu].x + xi_sigma[mu].y * xi_sigma[mu].y;
-    for (int mu = 0; mu < 6; ++mu)
+    for (int mu = 0; mu < 3; ++mu)
     {
       sigma_nrm2 += sigma[mu].x * sigma[mu].x + sigma[mu].y * sigma[mu].y;
+    }
+    for (int mu = 3; mu < 6; ++mu)
+    {
+      sigma_nrm2 += 2 * (sigma[mu].x * sigma[mu].x + sigma[mu].y * sigma[mu].y);
     }
   }
   float rel_diff = sqrt(div_nrm2 / sigma_nrm2);
