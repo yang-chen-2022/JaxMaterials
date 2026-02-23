@@ -35,9 +35,12 @@ void compute_stress(float *dev_epsilon, float *dev_sigma,
  * @param[in] cells Number of cells (nx,ny,nz)
  * @param[in] extents Size of domain in each direction (Lx,Ly,Lz)
  */
-void lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
-                              float *epsilon, float *sigma,
-                              int *cells,
-                              float *extents);
+extern "C"
+{
+    void lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
+                                  float *epsilon, float *sigma,
+                                  int *cells,
+                                  float *extents);
+}
 
 #endif // LIPPMANN_SCHWINGER_HH

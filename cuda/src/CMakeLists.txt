@@ -2,7 +2,7 @@ include(GoogleTest)
 add_subdirectory(tests)
 
 # Lippmann Schwinger solver library
-add_library(lippmannschwinger)
+add_library(lippmannschwinger SHARED)
 
 target_sources(lippmannschwinger
     PRIVATE
@@ -36,12 +36,14 @@ target_link_libraries(lippmannschwinger
 
 set_target_properties(lippmannschwinger PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ../lib
+    POSITION_INDEPENDENT_CODE ON
 )
 
 # Driver executable
 add_executable(driver)
 target_link_libraries(driver 
     PRIVATE
+        CUDA::cufft
         lippmannschwinger
 )
 target_sources(driver
@@ -59,6 +61,7 @@ target_sources(test
 )
 target_link_libraries(test
     PRIVATE
+        CUDA::cufft
         GTest::gtest_main         
         lippmannschwinger
 )

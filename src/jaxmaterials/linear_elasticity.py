@@ -3,7 +3,7 @@ import jax
 
 from jax import numpy as jnp
 
-__all__ = ["lippmann_schwinger"]
+__all__ = ["get_xizero", "initialise_material", "lippmann_schwinger"]
 
 
 def get_xizero(grid_spec, dtype=jnp.float64):
