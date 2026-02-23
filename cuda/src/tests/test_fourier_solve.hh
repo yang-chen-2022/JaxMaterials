@@ -1,30 +1,36 @@
 #ifndef TEST_FOURIER_SOLVE_HH
 #define TEST_FOURIER_SOLVE_HH TEST_FOURIER_SOLVE_HH
+#include <random>
+#include <algorithm>
 #include "fourier_solve.hh"
 #include <gtest/gtest.h>
 
-class FourierSolveTest : public ::testing::Test {
+class FourierSolveTest : public ::testing::Test
+{
 public:
   /** @Create a new instance */
   FourierSolveTest() {}
 
 protected:
   /** @brief initialise tests */
-  void SetUp() override {}
+  void SetUp() override
+  {
+    grid_spec.nx = 48;
+    grid_spec.ny = 64;
+    grid_spec.nz = 32;
+    grid_spec.Lx = 1.1;
+    grid_spec.Ly = 0.9;
+    grid_spec.Lz = 0.7;
+  }
+  GridSpec grid_spec;
 };
 
 /** @brief Check whether xi-zero is constructed consistently on device and host
  */
-TEST_F(FourierSolveTest, TestXiZero) {
+TEST_F(FourierSolveTest, TestXiZero)
+{
   float tolerance = 1.E-6;
   // halo size
-  GridSpec grid_spec;
-  grid_spec.nx = 48;
-  grid_spec.ny = 64;
-  grid_spec.nz = 32;
-  grid_spec.Lx = 1.1;
-  grid_spec.Ly = 0.9;
-  grid_spec.Lz = 0.7;
   int ncells = grid_spec.number_of_cells();
   // allocate host memory
   float *xi_zero = nullptr;
@@ -51,4 +57,83 @@ TEST_F(FourierSolveTest, TestXiZero) {
 
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
+
+/* Check whether div(sigma^0) = 0 for homogeneous material
+ *
+ * Here sigma^0_{ij} = C^0_{ijkl} epsilon_{kl} + tau_{ij}is obtained by solving the
+ * equations of linear elasticity in a homogeneous isotropic material with
+ *
+ *     C^0_{ijkl} = lambda^0 (delta_{ij}delta_{kl}
+ *                + mu^0 (delta_{ik}delta_{jl} + delta_{il}delta_{jk}))
+ *
+ * and given, random tau
+ */
+TEST_F(FourierSolveTest, TestDivSigma)
+{
+  std::default_random_engine rng(7812481);
+  std::normal_distribution<float> distribution(0, 1);
+  int ncells = grid_spec.number_of_cells();
+  const float lambda_0 = 0.8;
+  const float mu_0 = 1.3;
+  // allocate memory
+  float *xi_zero = nullptr;
+  float *dev_xi_zero = nullptr;
+  float *tau_hat = nullptr;
+  float *dev_tau_hat = nullptr;
+  float *dev_epsilon_hat = nullptr;
+  float *epsilon_hat = nullptr;
+  CUDA_CHECK(cudaMallocHost(&xi_zero, 3 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&tau_hat, 6 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&epsilon_hat, 6 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_xi_zero, 3 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_tau_hat, 6 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_epsilon_hat, 6 * ncells * sizeof(float)));
+
+  // Initialise Fourier vectors
+  initialize_xizero_host(xi_zero, grid_spec);
+  initialize_xizero(dev_xi_zero, grid_spec);
+
+  // Initialize with random numbers
+  std::generate(tau_hat, tau_hat + 6 * ncells, [&]()
+                { return distribution(rng); });
+  CUDA_CHECK(cudaMemcpy(dev_tau_hat, tau_hat, 6 * ncells * sizeof(float), cudaMemcpyDefault));
+
+  // Solve on device and copy back
+  fourier_solve(dev_tau_hat, dev_epsilon_hat, dev_xi_zero,
+                lambda_0, mu_0, grid_spec);
+  CUDA_CHECK(cudaMemcpy(epsilon_hat, dev_epsilon_hat, 6 * ncells * sizeof(float), cudaMemcpyDefault));
+
+  int nx = grid_spec.nx;
+  int ny = grid_spec.ny;
+  int nz = grid_spec.nz;
+  float div_nrm2 = 0;
+  for (int k = 0; k < nz; ++k)
+    for (int j = 0; j < ny; ++j)
+      for (int i = 0; i < nx; ++i)
+      {
+        float tr_epsilon_hat = epsilon_hat[FIDX(nx, ny, nz, 0, i, j, k)] +
+                               epsilon_hat[FIDX(nx, ny, nz, 1, i, j, k)] +
+                               epsilon_hat[FIDX(nx, ny, nz, 2, i, j, k)];
+        float xi_sigma_0 = xi_zero[FIDX(nx, ny, nz, 0, i, j, k)] * (2 * mu_0 * epsilon_hat[FIDX(nx, ny, nz, 0, i, j, k)] +
+                                                                    lambda_0 * tr_epsilon_hat) +
+                           2 * mu_0 * (xi_zero[FIDX(nx, ny, nz, 1, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 5, i, j, k)] + xi_zero[FIDX(nx, ny, nz, 2, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 4, i, j, k)]);
+        float xi_sigma_1 = xi_zero[FIDX(nx, ny, nz, 1, i, j, k)] * (2 * mu_0 * epsilon_hat[FIDX(nx, ny, nz, 1, i, j, k)] +
+                                                                    lambda_0 * tr_epsilon_hat) +
+                           2 * mu_0 * (xi_zero[FIDX(nx, ny, nz, 0, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 5, i, j, k)] + xi_zero[FIDX(nx, ny, nz, 2, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 3, i, j, k)]);
+        float xi_sigma_2 = xi_zero[FIDX(nx, ny, nz, 2, i, j, k)] * (2 * mu_0 * epsilon_hat[FIDX(nx, ny, nz, 2, i, j, k)] +
+                                                                    lambda_0 * tr_epsilon_hat) +
+                           2 * mu_0 * (xi_zero[FIDX(nx, ny, nz, 0, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 4, i, j, k)] + xi_zero[FIDX(nx, ny, nz, 1, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 3, i, j, k)]);
+        div_nrm2 += xi_sigma_0 * xi_sigma_0 + xi_sigma_1 * xi_sigma_1 + xi_sigma_2 * xi_sigma_2;
+      }
+
+  printf("||div(sigma)|| = %8.4e\n", sqrt(div_nrm2));
+  // free memory
+  CUDA_CHECK(cudaFree(dev_xi_zero));
+  CUDA_CHECK(cudaFree(dev_tau_hat));
+  CUDA_CHECK(cudaFree(dev_epsilon_hat));
+  CUDA_CHECK(cudaFreeHost(xi_zero));
+  CUDA_CHECK(cudaFreeHost(tau_hat));
+  CUDA_CHECK(cudaFreeHost(epsilon_hat));
+}
+
 #endif // TEST_FOURIER_SOLVE_HH
