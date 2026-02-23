@@ -6,15 +6,9 @@ int main()
 {
   // domain size
   profile_derivatives();
-  GridSpec grid_spec;
-  grid_spec.nx = 128;
-  grid_spec.ny = 128;
-  grid_spec.nz = 128;
-  grid_spec.Lx = 1.0;
-  grid_spec.Ly = 1.0;
-  grid_spec.Lz = 1.0;
-  int ncells = grid_spec.number_of_cells();
-
+  int cells[3] = {64, 64, 64};
+  float extents[3] = {1.0, 1.0, 1.0};
+  int ncells = cells[0] * cells[1] * cells[2];
   float *lambda;
   float *mu;
   float epsilon_bar[6] = {1.0, 0.4, 0.2, 1.5, 0.8, 0.7};
@@ -25,7 +19,7 @@ int main()
   CUDA_CHECK(cudaMallocHost(&epsilon, 6 * ncells * sizeof(float)));
   CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
 
-  lippmann_schwinger_solve(lambda, mu, epsilon_bar, epsilon, sigma, grid_spec);
+  lippmann_schwinger_solve(lambda, mu, epsilon_bar, epsilon, sigma, cells, extents);
 
   CUDA_CHECK(cudaFreeHost(lambda));
   CUDA_CHECK(cudaFreeHost(mu));

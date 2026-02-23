@@ -61,8 +61,17 @@ void increment_solution(float *dev_epsilon, cufftComplex *dev_r,
 /* Lippmann Schwinger iteration */
 void lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
                               float *epsilon, float *sigma,
-                              const GridSpec grid_spec)
+                              int *cells,
+                              float *extents)
 {
+  GridSpec grid_spec;
+  grid_spec.nx = cells[0];
+  grid_spec.ny = cells[1];
+  grid_spec.nz = cells[2];
+  grid_spec.Lx = extents[0];
+  grid_spec.Ly = extents[1];
+  grid_spec.Lz = extents[2];
+
   int ncells = grid_spec.number_of_cells();
   // Set up cuFFT plan
   cufftHandle plan;

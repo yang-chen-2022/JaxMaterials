@@ -34,6 +34,10 @@ target_link_libraries(LippmannSchwingerLib
         GTest::gtest_main         
 )
 
+set_target_properties(LippmannSchwingerLib PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ../lib
+)
+
 # Driver executable
 add_executable(driver)
 target_link_libraries(driver 

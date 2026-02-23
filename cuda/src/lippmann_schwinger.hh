@@ -22,7 +22,8 @@
  */
 void compute_stress(float *dev_epsilon, float *dev_sigma,
                     float *dev_lambda, float *dev_mu,
-                    const GridSpec grid_spec);
+                    int *cells,
+                    float *extents);
 
 /** @brief Solve linear elasticity problem with Lippmann-Schwinger iteration
  *
@@ -31,10 +32,12 @@ void compute_stress(float *dev_epsilon, float *dev_sigma,
  * @param[in] epsilon_bar average value of epsilon (host array, size 6)
  * @param[out] epsilon Resulting strain (host array, size 6*ncells)
  * @param[out] sigma Resulting stress (host array, size 6*ncells)
- * @param[in] grid_spec Specification of computational grid
+ * @param[in] cells Number of cells (nx,ny,nz)
+ * @param[in] extents Size of domain in each direction (Lx,Ly,Lz)
  */
 void lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
                               float *epsilon, float *sigma,
-                              const GridSpec grid_spec);
+                              int *cells,
+                              float *extents);
 
 #endif // LIPPMANN_SCHWINGER_HH
