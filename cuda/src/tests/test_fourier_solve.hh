@@ -102,29 +102,29 @@ TEST_F(FourierSolveTest, TestDivSigma)
   fourier_solve(dev_tau_hat, dev_epsilon_hat, dev_xi_zero,
                 lambda_0, mu_0, grid_spec);
   CUDA_CHECK(cudaMemcpy(epsilon_hat, dev_epsilon_hat, 6 * ncells * sizeof(float), cudaMemcpyDefault));
-
-  int nx = grid_spec.nx;
-  int ny = grid_spec.ny;
-  int nz = grid_spec.nz;
   float div_nrm2 = 0;
-  for (int k = 0; k < nz; ++k)
-    for (int j = 0; j < ny; ++j)
-      for (int i = 0; i < nx; ++i)
-      {
-        float tr_epsilon_hat = epsilon_hat[FIDX(nx, ny, nz, 0, i, j, k)] +
-                               epsilon_hat[FIDX(nx, ny, nz, 1, i, j, k)] +
-                               epsilon_hat[FIDX(nx, ny, nz, 2, i, j, k)];
-        float xi_sigma_0 = xi_zero[FIDX(nx, ny, nz, 0, i, j, k)] * (2 * mu_0 * epsilon_hat[FIDX(nx, ny, nz, 0, i, j, k)] +
-                                                                    lambda_0 * tr_epsilon_hat) +
-                           2 * mu_0 * (xi_zero[FIDX(nx, ny, nz, 1, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 5, i, j, k)] + xi_zero[FIDX(nx, ny, nz, 2, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 4, i, j, k)]);
-        float xi_sigma_1 = xi_zero[FIDX(nx, ny, nz, 1, i, j, k)] * (2 * mu_0 * epsilon_hat[FIDX(nx, ny, nz, 1, i, j, k)] +
-                                                                    lambda_0 * tr_epsilon_hat) +
-                           2 * mu_0 * (xi_zero[FIDX(nx, ny, nz, 0, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 5, i, j, k)] + xi_zero[FIDX(nx, ny, nz, 2, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 3, i, j, k)]);
-        float xi_sigma_2 = xi_zero[FIDX(nx, ny, nz, 2, i, j, k)] * (2 * mu_0 * epsilon_hat[FIDX(nx, ny, nz, 2, i, j, k)] +
-                                                                    lambda_0 * tr_epsilon_hat) +
-                           2 * mu_0 * (xi_zero[FIDX(nx, ny, nz, 0, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 4, i, j, k)] + xi_zero[FIDX(nx, ny, nz, 1, i, j, k)] * tau_hat[FIDX(nx, ny, nz, 3, i, j, k)]);
-        div_nrm2 += xi_sigma_0 * xi_sigma_0 + xi_sigma_1 * xi_sigma_1 + xi_sigma_2 * xi_sigma_2;
-      }
+  for (int ell = 0; ell < ncells; ++ell)
+  {
+    float xi[3];
+    float tau[6];
+    float epsilon[6];
+    for (int mu = 0; mu < 3; ++mu)
+      xi[mu] = xi_zero[mu * ncells + ell];
+    for (int mu = 0; mu < 6; ++mu)
+    {
+      tau[mu] = tau_hat[mu * ncells + ell];
+      epsilon[mu] = epsilon_hat[mu * ncells + ell];
+    }
+
+    float tr_epsilon_hat = epsilon[0] + epsilon[1] + epsilon[2];
+    float xi_sigma_0 = xi[0] * (2 * mu_0 * epsilon[0] + lambda_0 * tr_epsilon_hat) +
+                       2 * mu_0 * (xi[1] * tau[5] + xi[2] * tau[4]);
+    float xi_sigma_1 = xi[1] * (2 * mu_0 * epsilon[1] + lambda_0 * tr_epsilon_hat) +
+                       2 * mu_0 * (xi[0] * tau[5] + xi[2] * tau[3]);
+    float xi_sigma_2 = xi[2] * (2 * mu_0 * epsilon[2] + lambda_0 * tr_epsilon_hat) +
+                       2 * mu_0 * (xi[0] * tau[4] + xi[1] * tau[3]);
+    div_nrm2 += xi_sigma_0 * xi_sigma_0 + xi_sigma_1 * xi_sigma_1 + xi_sigma_2 * xi_sigma_2;
+  }
 
   printf("||div(sigma)|| = %8.4e\n", sqrt(div_nrm2));
   // free memory
