@@ -13,20 +13,40 @@ void profile_derivatives()
 
     int ncells = grid_spec.number_of_cells();
 
-    // allocate device memory
+    // ==== device ====
+    // allocate memory
     float *dev_u = nullptr;
     float *dev_du = nullptr;
     cudaMalloc(&dev_u, ncells * sizeof(float));
     cudaMalloc(&dev_du, ncells * sizeof(float));
+    // measure time
     auto t_start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < niter; ++i)
     {
         backward_derivative_device(dev_u, dev_du, 0, grid_spec);
-        cudaDeviceSynchronize();
+        CUDA_CHECK(cudaDeviceSynchronize());
     }
     auto t_finish = std::chrono::high_resolution_clock::now();
     double t_elapsed = double(std::chrono::duration_cast<std::chrono::microseconds>(t_finish - t_start).count()) / niter;
-    printf("time per call = %8.2f us \n", t_elapsed);
+    printf("time per call [device] = %8.2f us \n", t_elapsed);
+    // ==== host ====
+    niter = 10;
+    // allocate memory
+    float *u = nullptr;
+    float *du = nullptr;
+    cudaMallocHost(&u, ncells * sizeof(float));
+    cudaMallocHost(&du, ncells * sizeof(float));
+    // measure time
+    t_start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < niter; ++i)
+    {
+        backward_derivative_host(u, du, 0, grid_spec);
+    }
+    t_finish = std::chrono::high_resolution_clock::now();
+    t_elapsed = double(std::chrono::duration_cast<std::chrono::microseconds>(t_finish - t_start).count()) / niter;
+    printf("time per call [host]   = %8.2f us \n", t_elapsed);
     cudaFree(dev_u);
     cudaFree(dev_du);
+    cudaFreeHost(u);
+    cudaFreeHost(du);
 }
