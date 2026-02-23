@@ -2,9 +2,9 @@ include(GoogleTest)
 add_subdirectory(tests)
 
 # Lippmann Schwinger solver library
-add_library(LippmannSchwingerLib)
+add_library(lippmannschwinger)
 
-target_sources(LippmannSchwingerLib
+target_sources(lippmannschwinger
     PRIVATE
         FILE_SET internalOnlyHeaders
         TYPE HEADERS
@@ -28,13 +28,13 @@ target_sources(LippmannSchwingerLib
 )
 
 # Link against google test
-target_link_libraries(LippmannSchwingerLib
+target_link_libraries(lippmannschwinger
     PRIVATE
         CUDA::cufft
         GTest::gtest_main         
 )
 
-set_target_properties(LippmannSchwingerLib PROPERTIES
+set_target_properties(lippmannschwinger PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ../lib
 )
 
@@ -42,7 +42,7 @@ set_target_properties(LippmannSchwingerLib PROPERTIES
 add_executable(driver)
 target_link_libraries(driver 
     PRIVATE
-        LippmannSchwingerLib
+        lippmannschwinger
 )
 target_sources(driver
     PRIVATE
@@ -60,7 +60,7 @@ target_sources(test
 target_link_libraries(test
     PRIVATE
         GTest::gtest_main         
-        LippmannSchwingerLib
+        lippmannschwinger
 )
 set_target_properties(test PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ../bin)
