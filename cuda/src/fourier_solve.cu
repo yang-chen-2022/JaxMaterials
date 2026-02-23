@@ -1,4 +1,4 @@
-/* Implementation of fourier_solve.hh */
+/* Implementation of fourier_solve_device.hh */
 #include "fourier_solve.hh"
 
 /* kernel to initialize Fourier vectors */
@@ -115,9 +115,9 @@ __global__ void fourier_solve_kernel(float *dev_tau_hat, float *dev_epsilon_hat,
 }
 
 /* Fourier solve for homogeneous isotropic reference material */
-void fourier_solve(float *dev_tau_hat, float *dev_epsilon_hat, float *dev_xi_zero,
-                   const float lambda_0, const float mu_0,
-                   const GridSpec grid_spec)
+void fourier_solve_device(float *dev_tau_hat, float *dev_epsilon_hat, float *dev_xi_zero,
+                          const float lambda_0, const float mu_0,
+                          const GridSpec grid_spec)
 {
     int ncells = grid_spec.number_of_cells();
     const int nblocks = (ncells + BLOCKSIZE - 1) / BLOCKSIZE;

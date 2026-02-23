@@ -21,8 +21,7 @@
  * @param[out] dev_xi_zero vectors ring{tilde{xi}} (device array, size 3*ncells)
  * @param[in] grid_spec specification of grid
  */
-void initialize_xizero(float *dev_xi_zero,
-                       const GridSpec grid_spec);
+void initialize_xizero(float *dev_xi_zero, const GridSpec grid_spec);
 
 /** @brief Construct Fourier vectors ring{tilde{xi}}_j on host
  *
@@ -31,23 +30,24 @@ void initialize_xizero(float *dev_xi_zero,
  * @param[out] dev_xi_zero vectors ring{tilde{xi}} (host array, size 3*ncells)
  * @param[in] grid_spec specification of grid
  */
-void initialize_xizero_host(float *xi_zero,
-                            const GridSpec grid_spec);
+void initialize_xizero_host(float *xi_zero, const GridSpec grid_spec);
 
-/** @brief Solve elasticity equation for homogeneous isotropic reference material
+/** @brief Solve elasticity equation for homogeneous isotropic reference
+ * material
  *
  * Compute hat{epsilon} = -Gamma^0 hat{tau}
  *
  * @param[in] dev_tau_hat right hand side hat{tau} (device array, size 6*ncells)
- * @param[out] dev_epsilon_hat resulting hat{epsilon} (device array, size 6*ncells)
+ * @param[out] dev_epsilon_hat resulting hat{epsilon} (device array, size
+ * 6*ncells)
  * @param[in] dev_xi_zero Fourier vectors xi_zero (device array, size 3*n),
  *                        as computed by initialize_xizero()
  * @param[in] lambda_0 Lame parameter lambda_0 of reference material
  * @param[in] mu_0 Lame parameter mu_0 of reference material
  * @param[in] grid_spec Grid specification
  */
-void fourier_solve(float *dev_tau_hat, float *dev_epsilon_hat, float *dev_xi_zero,
-                   const float lambda_0, const float mu_0,
-                   const GridSpec grid_spec);
+void fourier_solve_device(float *dev_tau_hat, float *dev_epsilon_hat,
+                          float *dev_xi_zero, const float lambda_0,
+                          const float mu_0, const GridSpec grid_spec);
 
 #endif // FOURIER_SOLVE_HH

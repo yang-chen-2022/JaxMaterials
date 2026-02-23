@@ -99,8 +99,8 @@ TEST_F(FourierSolveTest, TestDivSigma)
   CUDA_CHECK(cudaMemcpy(dev_tau_hat, tau_hat, 6 * ncells * sizeof(float), cudaMemcpyDefault));
 
   // Solve on device and copy back
-  fourier_solve(dev_tau_hat, dev_epsilon_hat, dev_xi_zero,
-                lambda_0, mu_0, grid_spec);
+  fourier_solve_device(dev_tau_hat, dev_epsilon_hat, dev_xi_zero,
+                       lambda_0, mu_0, grid_spec);
   CUDA_CHECK(cudaDeviceSynchronize());
   CUDA_CHECK(cudaMemcpy(epsilon_hat, dev_epsilon_hat, 6 * ncells * sizeof(float), cudaMemcpyDefault));
   float sigma_nrm2 = 0;
