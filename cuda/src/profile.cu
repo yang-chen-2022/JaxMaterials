@@ -17,8 +17,8 @@ void profile_derivatives()
     // allocate memory
     float *dev_u = nullptr;
     float *dev_du = nullptr;
-    cudaMalloc(&dev_u, ncells * sizeof(float));
-    cudaMalloc(&dev_du, ncells * sizeof(float));
+    CUDA_CHECK(cudaMalloc(&dev_u, ncells * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&dev_du, ncells * sizeof(float)));
     // measure time
     auto t_start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < niter; ++i)
@@ -34,8 +34,8 @@ void profile_derivatives()
     // allocate memory
     float *u = nullptr;
     float *du = nullptr;
-    cudaMallocHost(&u, ncells * sizeof(float));
-    cudaMallocHost(&du, ncells * sizeof(float));
+    CUDA_CHECK(cudaMallocHost(&u, ncells * sizeof(float)));
+    CUDA_CHECK(cudaMallocHost(&du, ncells * sizeof(float)));
     // measure time
     t_start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < niter; ++i)
@@ -45,8 +45,8 @@ void profile_derivatives()
     t_finish = std::chrono::high_resolution_clock::now();
     t_elapsed = double(std::chrono::duration_cast<std::chrono::microseconds>(t_finish - t_start).count()) / niter;
     printf("time per call [host]   = %8.2f us \n", t_elapsed);
-    cudaFree(dev_u);
-    cudaFree(dev_du);
-    cudaFreeHost(u);
-    cudaFreeHost(du);
+    CUDA_CHECK(cudaFree(dev_u));
+    CUDA_CHECK(cudaFree(dev_du));
+    CUDA_CHECK(cudaFreeHost(u));
+    CUDA_CHECK(cudaFreeHost(du));
 }
