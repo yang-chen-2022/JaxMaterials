@@ -69,13 +69,18 @@ float relative_divergence_norm(cufftComplex *dev_sigma_hat, cufftComplex *dev_di
  * @param[out] sigma Resulting stress (host array, size 6*ncells)
  * @param[in] cells Number of cells (nx,ny,nz)
  * @param[in] extents Size of domain in each direction (Lx,Ly,Lz)
+ * @param[in] tolerance tolerance on normalised divergence
+ * @param[in] maxiter maximum number of iterations
+ *
+ * Returns the actual number of iterations
  */
 extern "C"
 {
-    void lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
-                                  float *epsilon, float *sigma,
-                                  int *cells,
-                                  float *extents);
+    int lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
+                                 float *epsilon, float *sigma,
+                                 int *cells,
+                                 float *extents,
+                                 float tolerance, int maxiter);
 }
 
 #endif // LIPPMANN_SCHWINGER_HH

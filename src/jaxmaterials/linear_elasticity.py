@@ -358,13 +358,15 @@ def lippmann_schwinger_cuda(lmbda, mu, E_mean, grid_spec, tolerance=1e-8, maxite
         np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
         np.ctypeslib.ndpointer(ctypes.c_int, flags="C_CONTIGUOUS"),
         np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
+        ctypes.c_float,
+        ctypes.c_int,
     ]
+    cuda_code.restype = ctypes.c_int
     cells = np.array([64, 64, 64], dtype=np.int32)
     extents = np.array([1.0, 1.0, 1.0], dtype=np.float32)
     epsilon = jnp.empty((6,) + grid_spec.N, dtype=np.float32)
     sigma = jnp.empty((6,) + grid_spec.N, dtype=np.float32)
-
-    cuda_code(
+    iter = cuda_code(
         np.asarray(mu),
         np.asarray(lmbda),
         np.asarray(E_mean, dtype=np.float32),
@@ -372,5 +374,7 @@ def lippmann_schwinger_cuda(lmbda, mu, E_mean, grid_spec, tolerance=1e-8, maxite
         np.asarray(sigma),
         cells,
         extents,
+        tolerance,
+        maxiter,
     )
-    return epsilon, sigma, -1
+    return epsilon, sigma, iter

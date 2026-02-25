@@ -145,10 +145,11 @@ float relative_divergence_norm(cufftComplex *dev_sigma_hat, cufftComplex *dev_di
 /* Lippmann Schwinger iteration */
 extern "C"
 {
-  void lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
-                                float *epsilon, float *sigma,
-                                int *cells,
-                                float *extents)
+  int lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
+                               float *epsilon, float *sigma,
+                               int *cells,
+                               float *extents,
+                               float tolerance, int maxiter)
   {
     GridSpec grid_spec;
     grid_spec.nx = cells[0];
@@ -203,8 +204,8 @@ extern "C"
     CUBLAS_CHECK(cublasCreate(&handle));
     // main Lippmann-Schwinger loop
     float rel_div_norm = 0;
-    const int maxiter = 10;
-    for (int iter = 0; iter < maxiter; ++iter)
+    int iter;
+    for (iter = 0; iter < maxiter; ++iter)
     {
       printf("iteration %4d\n", iter);
       /* ==== STEP 1 ==== Compute stress: sigma_{ij} = C_{ijkl} epsilon_{kl} */
@@ -220,6 +221,8 @@ extern "C"
       CUDA_CHECK(cudaDeviceSynchronize());
       rel_div_norm = relative_divergence_norm(dev_sigma_hat, dev_div_sigma_hat, handle, grid_spec);
       printf("rel divergence norm = %e\n", rel_div_norm);
+      if (rel_div_norm < tolerance)
+        break;
       /* ==== STEP 4 ==== Solve in Fourier space: hat(r)_{kl} = -Gamma^{0}_{klij} hat(sigma)_{ij} */
       fourier_solve_device(dev_sigma_hat, dev_residual, dev_xi_zero, lambda_0, mu_0, grid_spec);
       CUDA_CHECK(cudaDeviceSynchronize());
@@ -246,5 +249,6 @@ extern "C"
     CUDA_CHECK(cudaFree(dev_residual));
     CUDA_CHECK(cudaFree(dev_sigma_hat));
     CUBLAS_CHECK(cublasDestroy(handle));
+    return iter;
   }
 }
