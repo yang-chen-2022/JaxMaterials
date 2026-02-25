@@ -2,20 +2,57 @@
 #include "lippmann_schwinger.hh"
 #include "profile.hh"
 
+void initialize_lame_parameters(float *lambda, float *mu, const GridSpec grid_spec)
+{
+  int nx = grid_spec.nx;
+  int ny = grid_spec.nz;
+  int nz = grid_spec.nz;
+  float x0 = 0.2;
+  float y0 = 0.3;
+  float r = 0.1;
+
+  for (int k = 0; k < nz; ++k)
+    for (int j = 0; j < ny; ++j)
+      for (int i = 0; i < nx; ++i)
+      {
+        float x = grid_spec.Lx * (i + 0.5) / nx;
+        float y = grid_spec.Ly * (j + 0.5) / ny;
+        float z = grid_spec.Lz * (k + 0.5) / nz;
+        if (((x - x0) * (x - x0) + (y - y0) * (y - y0)) < r * r)
+        {
+          lambda[IDX(nx, ny, nz, i, j, k)] = 0.2;
+          mu[IDX(nx, ny, nz, i, j, k)] = 0.3;
+        }
+        else
+        {
+          lambda[IDX(nx, ny, nz, i, j, k)] = 0.8;
+          mu[IDX(nx, ny, nz, i, j, k)] = 1.2;
+        }
+      }
+}
+
 int main()
 {
   // domain size
   profile_derivatives();
   int cells[3] = {64, 64, 64};
   float extents[3] = {1.0, 1.0, 1.0};
+  GridSpec grid_spec;
+  grid_spec.nx = cells[0];
+  grid_spec.ny = cells[1];
+  grid_spec.nz = cells[2];
+  grid_spec.Lx = extents[0];
+  grid_spec.Ly = extents[1];
+  grid_spec.Lz = extents[2];
   int ncells = cells[0] * cells[1] * cells[2];
   float *lambda;
   float *mu;
-  float epsilon_bar[6] = {1.0, 0.4, 0.2, 1.5, 0.8, 0.7};
+  float epsilon_bar[6] = {1.1, 0.4, 0.2, 1.5, 0.8, 0.7};
   float *epsilon;
   float *sigma;
   CUDA_CHECK(cudaMallocHost(&lambda, ncells * sizeof(float)));
   CUDA_CHECK(cudaMallocHost(&mu, ncells * sizeof(float)));
+  initialize_lame_parameters(lambda, mu, grid_spec);
   CUDA_CHECK(cudaMallocHost(&epsilon, 6 * ncells * sizeof(float)));
   CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
 

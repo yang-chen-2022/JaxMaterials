@@ -3,6 +3,22 @@
 #include "cufft.h"
 #include "common.hh"
 
+/** @brief Construct Fourier vectors tilde{xi}_j on device
+ *
+ * The vectors are defined as
+ *
+ *    tilde(xi)_0 = 2/h_0 sin(xi_0/2) cos(xi_1/2) cos(xi_2/2)
+ *    tilde(xi)_1 = 2/h_1 cos(xi_0/2) sin(xi_1/2) cos(xi_2/2)
+ *    tilde(xi)_2 = 2/h_2 cos(xi_0/2) cos(xi_1/2) sin(xi_2/2)
+ *
+ * with (xi_d)_j = 2 pi k_j / N_d and k_j = 0,1,...,N_d-1
+ *
+ *
+ * @param[out] dev_xi vectors tilde{xi} (device array, size 3*ncells)
+ * @param[in] grid_spec specification of grid
+ */
+void initialize_xi(float *dev_xi, const GridSpec grid_spec);
+
 /** @brief Construct Fourier vectors ring{tilde{xi}}_j on device
  *
  * The vectors are defined as

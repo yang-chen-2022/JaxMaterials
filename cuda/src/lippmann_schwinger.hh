@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include "cufft.h"
+#include "cublas_v2.h"
 #include "common.hh"
 #include "derivatives.hh"
 #include "fourier_solve.hh"
@@ -40,6 +41,24 @@ void compute_stress(float *dev_epsilon, float *dev_sigma,
  */
 void increment_solution(float *dev_epsilon, cufftComplex *dev_r,
                         const GridSpec grid_spec);
+
+/** @brief Compute normalised divergence for stopping criterion in Fourier space
+ *
+ * Compute the relative divergence norm
+ *
+ *      sqrt(<||div(sigma)||^2>) / ||<sigma>||
+ *
+ * Which in Fourier space is given by
+ *
+ *      sqrt(<||xi.hat(sigma)||^2>) / ||hat(sigma)(0)||
+ *
+ * @param[in] dev_sigma_hat stress in Fourier space
+ * @param[in] dev_div_sigma_hat divergence of stress in Fourier space
+ * @param[in] handle cuBLAS handle
+ * @param[in] grid_spec specification of grid
+ */
+float relative_divergence_norm(cufftComplex *dev_sigma_hat, cufftComplex *dev_div_sigma_hat,
+                               cublasHandle_t &handle, const GridSpec grid_spec);
 
 /** @brief Solve linear elasticity problem with Lippmann-Schwinger iteration
  *

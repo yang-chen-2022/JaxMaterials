@@ -42,6 +42,16 @@
     }                                                                          \
   } while (0)
 
+// Corresponding cuBLAS error checking
+#define CUBLAS_CHECK(expr_to_check)                                            \
+  do {                                                                         \
+    cublasStatus_t stat = expr_to_check;                                       \
+    if (stat != CUBLAS_STATUS_SUCCESS) {                                       \
+      fprintf(stderr, "cuBLAS Runtime Error: %s:%i:%d\n", __FILE__, __LINE__,  \
+              stat);                                                           \
+    }                                                                          \
+  } while (0)
+
 /** @brief Specification of computational grid
  *
  * Describes grid of the domain Lx x Ly x Lz with nx, ny, nz grid cells
