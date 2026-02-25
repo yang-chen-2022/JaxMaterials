@@ -23,7 +23,6 @@ target_sources(lippmannschwinger
             lippmann_schwinger.hh
 )
 
-# Link against google test
 target_link_libraries(lippmannschwinger
     PRIVATE
         CUDA::cufft
