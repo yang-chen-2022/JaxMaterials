@@ -1,9 +1,15 @@
 import numpy as np
 import jax
+import ctypes
 
 from jax import numpy as jnp
 
-__all__ = ["get_xizero", "initialise_material", "lippmann_schwinger"]
+__all__ = [
+    "get_xizero",
+    "initialise_material",
+    "lippmann_schwinger",
+    "lippmann_schwinger_cuda",
+]
 
 
 def get_xizero(grid_spec, dtype=jnp.float64):
@@ -333,3 +339,38 @@ def lippmann_schwinger(
     )
 
     return epsilon[0, ...], sigma, iter
+
+
+def lippmann_schwinger_cuda(lmbda, mu, E_mean, grid_spec, tolerance=1e-8, maxiter=32):
+    # Load cuda library
+    try:
+        lib = ctypes.CDLL("liblippmannschwinger.so")
+    except:
+        raise RuntimeError(
+            "Unable to load cuda library liblippmannschwinger.so. Compile and check LD_LIBRARY_PATH."
+        )
+    cuda_code = lib.lippmann_schwinger_solve
+    cuda_code.argtypes = [
+        np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
+        np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
+        np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
+        np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
+        np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
+        np.ctypeslib.ndpointer(ctypes.c_int, flags="C_CONTIGUOUS"),
+        np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
+    ]
+    cells = np.array([64, 64, 64], dtype=np.int32)
+    extents = np.array([1.0, 1.0, 1.0], dtype=np.float32)
+    epsilon = jnp.empty((6,) + grid_spec.N, dtype=np.float32)
+    sigma = jnp.empty((6,) + grid_spec.N, dtype=np.float32)
+
+    cuda_code(
+        np.asarray(mu),
+        np.asarray(lmbda),
+        np.asarray(E_mean, dtype=np.float32),
+        np.asarray(epsilon),
+        np.asarray(sigma),
+        cells,
+        extents,
+    )
+    return epsilon, sigma, -1

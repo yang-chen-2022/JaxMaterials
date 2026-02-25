@@ -3,7 +3,6 @@ from collections import namedtuple
 from matplotlib import pyplot as plt
 import jax
 from jaxmaterials.utilities import measure_time
-import ctypes
 
 # jax.config.update("jax_platform_name", "cpu")
 jax.config.update("jax_enable_x64", True)
@@ -34,42 +33,23 @@ xi = get_xizero(grid_spec)
 mu, lmbda = initialise_material(grid_spec, dtype=dtype)
 E_mean = jnp.array([1.0, 2.0, 0.0, 0.0, 0.0, 0.0], dtype=dtype)
 
-with measure_time("evaluation"):
+with measure_time("evaluation [Jax]"):
     epsilon, sigma, iter = lippmann_schwinger(
         lmbda, mu, E_mean, grid_spec, maxiter=32, depth=depth, tolerance=tolerance
     )
     epsilon.block_until_ready()
-    # jax.profiler.save_device_memory_profile("memory.prof")
+
+with measure_time("evaluation [CUDA]"):
+    epsilon, sigma, iter = lippmann_schwinger_cuda(
+        lmbda, mu, E_mean, grid_spec, maxiter=32, tolerance=tolerance
+    )
+    epsilon.block_until_ready()
+
 print(f"finished evaluation after {iter:5d} iterations")
 with measure_time("gradient"):
     grad_epsilon = jax.jacfwd(lippmann_schwinger, argnums=[2])
     dg = grad_epsilon(lmbda, mu, E_mean, grid_spec, depth=depth, tolerance=tolerance)
     dg[0][0].block_until_ready()
-
-# Load cuda library
-lib = ctypes.CDLL("liblippmannschwinger.so")
-lippmann_schwinger_cuda = lib.lippmann_schwinger_solve
-lippmann_schwinger_cuda.argtypes = [
-    np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
-    np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
-    np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
-    np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
-    np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
-    np.ctypeslib.ndpointer(ctypes.c_int, flags="C_CONTIGUOUS"),
-    np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
-]
-cells = np.array([64, 64, 64], dtype=np.int32)
-extents = np.array([1.0, 1.0, 1.0], dtype=np.float32)
-with measure_time("cuda"):
-    lippmann_schwinger_cuda(
-        np.asarray(mu),
-        np.asarray(lmbda),
-        np.asarray(E_mean),
-        np.asarray(epsilon),
-        np.asarray(sigma),
-        cells,
-        extents,
-    )
 
 plotting = False
 if plotting:
