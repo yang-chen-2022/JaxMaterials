@@ -47,7 +47,7 @@ with measure_time("gradient"):
     dg[0][0].block_until_ready()
 
 # Load cuda library
-lib = ctypes.CDLL("../cuda/build/lib/liblippmannschwinger.so")
+lib = ctypes.CDLL("liblippmannschwinger.so")
 lippmann_schwinger_cuda = lib.lippmann_schwinger_solve
 lippmann_schwinger_cuda.argtypes = [
     np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),

@@ -29,7 +29,7 @@ __global__ void backward_derivative_x_kernel(float *u, float *du_dx,
     _du_dx -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, b, (c - 1 + nz) % nz)];
     _du_dx -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, (b - 1 + ny) % ny, (c - 1 + nz) % nz)];
     //  Copy back to global memory
-    du_dx[IDX(nx, ny, nz, a, b, c)] = 0.25 * h_inv * _du_dx;
+    du_dx[IDX(nx, ny, nz, a, b, c)] += 0.25 * h_inv * _du_dx;
   }
 }
 
@@ -57,7 +57,7 @@ __global__ void backward_derivative_y_kernel(float *u, float *du_dy,
     _du_dy -= u[IDX(nx, ny, nz, a, (b - 1 + ny) % ny, (c - 1 + nz) % nz)];
     _du_dy -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, (b - 1 + ny) % ny, (c - 1 + nz) % nz)];
     //  Copy back to global memory
-    du_dy[IDX(nx, ny, nz, a, b, c)] = 0.25 * h_inv * _du_dy;
+    du_dy[IDX(nx, ny, nz, a, b, c)] += 0.25 * h_inv * _du_dy;
   }
 }
 
@@ -85,7 +85,7 @@ __global__ void backward_derivative_z_kernel(float *u, float *du_dz,
     _du_dz -= u[IDX(nx, ny, nz, a, (b - 1 + ny) % ny, (c - 1 + nz) % nz)];
     _du_dz -= u[IDX(nx, ny, nz, (a - 1 + nx) % nx, (b - 1 + ny) % ny, (c - 1 + nz) % nz)];
     //  Copy back to global memory
-    du_dz[IDX(nx, ny, nz, a, b, c)] = 0.25 * h_inv * _du_dz;
+    du_dz[IDX(nx, ny, nz, a, b, c)] += 0.25 * h_inv * _du_dz;
   }
 }
 
@@ -179,7 +179,7 @@ __global__ void backward_derivative_x_kernel_shared(float *u, float *du_dx,
     _du_dx -= u_shared[IDX(BLOCKSIZE_X + 1, BLOCKSIZE_Y + 1, BLOCKSIZE_Z + 1,
                            threadIdx.x, threadIdx.y, threadIdx.z)];
     //  Copy back to global memory
-    du_dx[IDX(nx, ny, nz, a, b, c)] = 0.25 * h_inv * _du_dx;
+    du_dx[IDX(nx, ny, nz, a, b, c)] += 0.25 * h_inv * _du_dx;
   }
 }
 
@@ -219,7 +219,7 @@ __global__ void backward_derivative_y_kernel_shared(float *u, float *du_dy,
     _du_dy -= u_shared[IDX(BLOCKSIZE_X + 1, BLOCKSIZE_Y + 1, BLOCKSIZE_Z + 1,
                            threadIdx.x, threadIdx.y, threadIdx.z)];
     //  Copy back to global memory
-    du_dy[IDX(nx, ny, nz, a, b, c)] = 0.25 * h_inv * _du_dy;
+    du_dy[IDX(nx, ny, nz, a, b, c)] += 0.25 * h_inv * _du_dy;
   }
 }
 
@@ -259,7 +259,7 @@ __global__ void backward_derivative_z_kernel_shared(float *u, float *du_dz,
     _du_dz -= u_shared[IDX(BLOCKSIZE_X + 1, BLOCKSIZE_Y + 1, BLOCKSIZE_Z + 1,
                            threadIdx.x, threadIdx.y, threadIdx.z)];
     //  Copy back to global memory
-    du_dz[IDX(nx, ny, nz, a, b, c)] = 0.25 * h_inv * _du_dz;
+    du_dz[IDX(nx, ny, nz, a, b, c)] += 0.25 * h_inv * _du_dz;
   }
 }
 
@@ -271,11 +271,15 @@ __global__ void backward_derivative_z_kernel_shared(float *u, float *du_dz,
 void backward_derivative_device(float *dev_u, float *dev_du,
                                 const int direction,
                                 const GridSpec grid_spec,
-                                bool use_shared_memory)
+                                const bool increment,
+                                const bool use_shared_memory)
 {
   int nx = grid_spec.nx;
   int ny = grid_spec.ny;
   int nz = grid_spec.nz;
+  int ncells = grid_spec.number_of_cells();
+  if (not increment)
+    CUDA_CHECK(cudaMemset(dev_du, 0, ncells * sizeof(float)));
   dim3 grid((nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X,
             (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
             (nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z);
@@ -307,11 +311,15 @@ void backward_derivative_device(float *dev_u, float *dev_du,
 /* Compute backward derivative on host */
 void backward_derivative_host(float *u, float *du,
                               const int direction,
-                              const GridSpec grid_spec)
+                              const GridSpec grid_spec,
+                              const bool increment)
 {
   int nx = grid_spec.nx;
   int ny = grid_spec.ny;
   int nz = grid_spec.nz;
+  int ncells = grid_spec.number_of_cells();
+  if (not(increment))
+    std::fill(du, du + ncells, 0);
   if (direction == 0)
   {
     float h_inv = grid_spec.nx / grid_spec.Lx;
@@ -329,7 +337,7 @@ void backward_derivative_host(float *u, float *du,
           _du_dx -= u[IDX(nx, ny, nz, (i - 1 + nx) % nx, j, (k - 1 + nz) % nz)];
           _du_dx -= u[IDX(nx, ny, nz, (i - 1 + nx) % nx, (j - 1 + ny) % ny,
                           (k - 1 + nz) % nz)];
-          du[IDX(nx, ny, nz, i, j, k)] = 0.25 * h_inv * _du_dx;
+          du[IDX(nx, ny, nz, i, j, k)] += 0.25 * h_inv * _du_dx;
         }
   }
   else if (direction == 1)
@@ -348,7 +356,7 @@ void backward_derivative_host(float *u, float *du,
           _du_dy -= u[IDX(nx, ny, nz, (i - 1 + nx) % nx, (j - 1 + ny) % ny, k)];
           _du_dy -= u[IDX(nx, ny, nz, i, (j - 1 + ny) % ny, (k - 1 + nz) % nz)];
           _du_dy -= u[IDX(nx, ny, nz, (i - 1 + nx) % nx, (j - 1 + ny) % ny, (k - 1 + nz) % nz)];
-          du[IDX(nx, ny, nz, i, j, k)] = 0.25 * h_inv * _du_dy;
+          du[IDX(nx, ny, nz, i, j, k)] += 0.25 * h_inv * _du_dy;
         }
   }
   else if (direction == 2)
@@ -367,9 +375,51 @@ void backward_derivative_host(float *u, float *du,
           _du_dz -= u[IDX(nx, ny, nz, (i - 1 + nx) % nx, j, (k - 1 + nz) % nz)];
           _du_dz -= u[IDX(nx, ny, nz, i, (j - 1 + ny) % ny, (k - 1 + nz) % nz)];
           _du_dz -= u[IDX(nx, ny, nz, (i - 1 + nx) % nx, (j - 1 + ny) % ny, (k - 1 + nz) % nz)];
-          du[IDX(nx, ny, nz, i, j, k)] = 0.25 * h_inv * _du_dz;
+          du[IDX(nx, ny, nz, i, j, k)] += 0.25 * h_inv * _du_dz;
         }
   }
   else
     throw std::runtime_error("Invalid direction");
+}
+
+/* Compute backward divergence of symmetric tensor on device */
+void backward_divergence_device(float *dev_sigma, float *dev_div_sigma,
+                                const GridSpec grid_spec,
+                                const bool use_shared_memory)
+{
+  int ncells = grid_spec.number_of_cells();
+  // Derivatives in x-direction
+  backward_derivative_device(dev_sigma + 0 * ncells, dev_div_sigma + 0 * ncells, 0, grid_spec, false, use_shared_memory);
+  backward_derivative_device(dev_sigma + 5 * ncells, dev_div_sigma + 1 * ncells, 0, grid_spec, false, use_shared_memory);
+  backward_derivative_device(dev_sigma + 4 * ncells, dev_div_sigma + 2 * ncells, 0, grid_spec, false, use_shared_memory);
+  CUDA_CHECK(cudaDeviceSynchronize());
+  // Derivatives in y-direction
+  backward_derivative_device(dev_sigma + 5 * ncells, dev_div_sigma + 0 * ncells, 1, grid_spec, true, use_shared_memory);
+  backward_derivative_device(dev_sigma + 1 * ncells, dev_div_sigma + 1 * ncells, 1, grid_spec, true, use_shared_memory);
+  backward_derivative_device(dev_sigma + 3 * ncells, dev_div_sigma + 2 * ncells, 1, grid_spec, true, use_shared_memory);
+  CUDA_CHECK(cudaDeviceSynchronize());
+  // Derivatives in z-direction
+  backward_derivative_device(dev_sigma + 4 * ncells, dev_div_sigma + 0 * ncells, 2, grid_spec, true, use_shared_memory);
+  backward_derivative_device(dev_sigma + 3 * ncells, dev_div_sigma + 1 * ncells, 2, grid_spec, true, use_shared_memory);
+  backward_derivative_device(dev_sigma + 2 * ncells, dev_div_sigma + 2 * ncells, 2, grid_spec, true, use_shared_memory);
+  CUDA_CHECK(cudaDeviceSynchronize());
+}
+
+/* Compute backward divergence of symmetric tensor on host */
+void backward_divergence_host(float *sigma, float *div_sigma,
+                              const GridSpec grid_spec)
+{
+  int ncells = grid_spec.number_of_cells();
+  // Derivatives in x-direction
+  backward_derivative_host(sigma + 0 * ncells, div_sigma + 0 * ncells, 0, grid_spec, false);
+  backward_derivative_host(sigma + 5 * ncells, div_sigma + 1 * ncells, 0, grid_spec, false);
+  backward_derivative_host(sigma + 4 * ncells, div_sigma + 2 * ncells, 0, grid_spec, false);
+  // Derivatives in y-direction
+  backward_derivative_host(sigma + 5 * ncells, div_sigma + 0 * ncells, 1, grid_spec, true);
+  backward_derivative_host(sigma + 1 * ncells, div_sigma + 1 * ncells, 1, grid_spec, true);
+  backward_derivative_host(sigma + 3 * ncells, div_sigma + 2 * ncells, 1, grid_spec, true);
+  // Derivatives in z-direction
+  backward_derivative_host(sigma + 4 * ncells, div_sigma + 0 * ncells, 2, grid_spec, true);
+  backward_derivative_host(sigma + 3 * ncells, div_sigma + 1 * ncells, 2, grid_spec, true);
+  backward_derivative_host(sigma + 2 * ncells, div_sigma + 2 * ncells, 2, grid_spec, true);
 }

@@ -14,3 +14,7 @@ find_package(GTest)
 
 # All code is in the src subdirectory
 add_subdirectory(src)
+
+install(
+  TARGETS lippmannschwinger 
+)

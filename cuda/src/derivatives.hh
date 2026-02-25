@@ -22,15 +22,17 @@
  *                             - u_{a,b,c-1}   - u_{a-1,b,c-1}
  *                             - u_{a,b-1,c-1} - u_{a-1,b-1,c-1} )
  *
- * @param[in] u: field for which the derivative is computed (device pointer)
- * @param[out] du: resulting field du/d{x,y,z} (device pointer)
- * @param[in] direction: coordinate direction in which the derivative is taken
- * @param[in] grid_spec: grid specification
+ * @param[in] u field for which the derivative is computed (device pointer)
+ * @param[out] du resulting field du/d{x,y,z} (device pointer)
+ * @param[in] direction coordinate direction in which the derivative is taken
+ * @param[in] grid_spec grid specification
+ * @param[in] increment increment values instead of overwriting them
  * @param[in] use_shared_memory use shared memory kernels?
  */
 void backward_derivative_device(float *u, float *du,
                                 const int direction,
                                 const GridSpec grid_spec,
+                                const bool increment = false,
                                 const bool use_shared_memory = false);
 
 /** @brief Compute backward derivative in arbitrary direction
@@ -40,10 +42,37 @@ void backward_derivative_device(float *u, float *du,
  * @param[in] u: field for which the derivative is computed (host pointer)
  * @param[out] du: resulting field du/d{x,y,z} (host pointer)
  * @param[in] direction: coordinate direction in which the derivative is taken
+ * @param[in] increment increment values instead of overwriting them
  * @param[in] grid_spec: grid specification
  */
 void backward_derivative_host(float *u, float *du,
                               const int direction,
+                              const GridSpec grid_spec,
+                              const bool increment = false);
+
+/** @brief Compute backward divergence of symmetric tensor on device
+ *
+ * For a given symmetric tensor sigma_{ij} in Voigt notation, compute the divergence
+ * div(sigma)_i = dsigma_{ij}/dx_j using backward derivatives.
+ *
+ * @param[in] dev_sigma: field for which the derivative is computed (device pointer, size 6*ncells)
+ * @param[out] dev_div_sigma: resulting divergence (device pointer, size 3*ncells)
+ * @param[in] grid_spec: grid specification
+ * @param[in] use_shared_memory use shared memory kernels?
+ */
+void backward_divergence_device(float *dev_sigma, float *dev_div_sigma,
+                                const GridSpec grid_spec,
+                                const bool use_shared_memory = false);
+
+/** @brief Compute backward divergence of symmetric tensor on host
+ *
+ * Equivalent implementation on host
+ *
+ * @param[in] sigma: field for which the derivative is computed (host pointer, size 6*ncells)
+ * @param[out] div_sigma: resulting divergence (host pointer, size 3*ncells)
+ * @param[in] grid_spec: grid specification
+ */
+void backward_divergence_host(float *sigma, float *div_sigma,
                               const GridSpec grid_spec);
 
 #endif // DERIVATIVES_HH

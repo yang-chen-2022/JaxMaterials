@@ -25,6 +25,22 @@ void compute_stress(float *dev_epsilon, float *dev_sigma,
                     int *cells,
                     float *extents);
 
+/** @brief Increment solution
+ *
+ * Increment
+ *
+ *      epsilon -> epsilon + 1/ncells * r
+ *
+ * where the factor 1/ncells arises since the inverse Fourier transformation
+ * in cuFFT is not normalised.
+ *
+ * @param[inout] dev_epsilon solution (device array, size 6*ncells)
+ * @param[in] dev_r increment (device array, size 6*ncells)
+ * @param[in] grid_spec specification of computational grid
+ */
+void increment_solution(float *dev_epsilon, cufftComplex *dev_r,
+                        const GridSpec grid_spec);
+
 /** @brief Solve linear elasticity problem with Lippmann-Schwinger iteration
  *
  * @param[in] lambda Lame parameter lambda (host array, size ncells)

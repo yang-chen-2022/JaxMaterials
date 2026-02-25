@@ -113,7 +113,7 @@ def backward_derivative(g, grid_spec, direction):
 
 
 def backward_divergence(sigma, grid_spec):
-    """Compute backward derivative of symmetric 3x3 tensor sigma_{ij}
+    """Compute backward divergence of symmetric 3x3 tensor sigma_{ij}
 
     The componets of the tensor are assumed to be represented in vector form
     using Voigt notation:

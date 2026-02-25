@@ -1,20 +1,6 @@
 /** @brief Implementation of common.hh */
 #include "common.hh"
 
-/* Initialise field with random values */
-void init_field(float *u, const GridSpec grid_spec) {
-  int nx = grid_spec.nx;
-  int ny = grid_spec.ny;
-  int nz = grid_spec.nz;
-  for (int i = 0; i < nx; ++i) {
-    for (int j = 0; j < ny; ++j) {
-      for (int k = 0; k < nz; ++k) {
-        u[IDX(nx, ny, nz, i, j, k)] = rand() / (float(RAND_MAX));
-      }
-    }
-  }
-}
-
 /* Compite relative difference between two fields  */
 float relative_difference(float *u, float *u_ref, const int ndof) {
   float nrm2 = 0;

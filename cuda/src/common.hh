@@ -58,15 +58,6 @@ struct GridSpec {
   int number_of_cells() const { return nx * ny * nz; }
 };
 
-/** @brief initialise field
- *
- * Set value of field to random values for testing
- *
- * @param[out] u: field to set (host pointer)
- * @param[in] grid_spec: Grid specification
- */
-void init_field(float *u, const GridSpec grid_spec);
-
 /** @brief Compute relative L2 norm
  *
  * Computes ||u-u_{ref}||_2 / ||u_{ref}||_2 which can be used for testing and

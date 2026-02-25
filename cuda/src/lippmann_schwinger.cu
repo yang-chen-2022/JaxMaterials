@@ -38,24 +38,27 @@ void compute_stress(float *dev_epsilon, float *dev_sigma,
                                                 dev_lambda, dev_mu, ncells);
 }
 
-/* Kernel for incrementing solution epsilon -> epsilon + r */
+/* Kernel for incrementing solution epsilon -> epsilon + alpha*r */
 __global__ void increment_solution_kernel(float *dev_epsilon, cufftComplex *dev_r,
+                                          const float alpha,
                                           const int ndof)
 {
   int ell = blockDim.x * blockIdx.x + threadIdx.x;
   if (ell < ndof)
   {
-    dev_epsilon[ell] += dev_r[ell].x;
+    dev_epsilon[ell] += alpha * dev_r[ell].x;
   }
 }
 
-/* Increment solution epsilon -> epsilon + r */
+/* Increment solution epsilon -> epsilon + 1/ncells * r */
 void increment_solution(float *dev_epsilon, cufftComplex *dev_r,
                         const GridSpec grid_spec)
 {
-  int ndof = 6 * grid_spec.number_of_cells();
+  int ncells = grid_spec.number_of_cells();
+  int ndof = 6 * ncells;
   const int nblocks = (ndof + BLOCKSIZE - 1) / BLOCKSIZE;
-  increment_solution_kernel<<<nblocks, BLOCKSIZE>>>(dev_epsilon, dev_r, ndof);
+  float alpha = 1 / ncells;
+  increment_solution_kernel<<<nblocks, BLOCKSIZE>>>(dev_epsilon, dev_r, alpha, ndof);
 }
 
 /* Lippmann Schwinger iteration */
