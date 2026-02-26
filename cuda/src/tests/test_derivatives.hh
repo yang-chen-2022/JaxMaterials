@@ -29,7 +29,7 @@ protected:
         rng.seed(7812481);
     }
     /* test backward derivative in a particular direction */
-    void test_derivative(const int direction, const bool use_shared_memory)
+    void test_derivative(const int direction)
     {
         int ncells = grid_spec.number_of_cells();
         // allocate host memory
@@ -51,8 +51,7 @@ protected:
 
         CUDA_CHECK(cudaMemcpy(dev_u, u, ncells * sizeof(float), cudaMemcpyDefault));
 
-        backward_derivative_device(dev_u, dev_du_dx, direction, grid_spec,
-                                   use_shared_memory);
+        backward_derivative_device(dev_u, dev_du_dx, direction, grid_spec);
         CUDA_CHECK(cudaDeviceSynchronize());
         backward_derivative_host(u, du_dx_ref, direction, grid_spec);
 
@@ -68,7 +67,7 @@ protected:
     }
 
     /* test backward divergence*/
-    void test_divergence(const bool use_shared_memory)
+    void test_divergence()
     {
         int ncells = grid_spec.number_of_cells();
         // allocate host memory
@@ -90,7 +89,7 @@ protected:
 
         CUDA_CHECK(cudaMemcpy(dev_sigma, sigma, 6 * ncells * sizeof(float), cudaMemcpyDefault));
 
-        backward_divergence_device(dev_sigma, dev_div_sigma, grid_spec, use_shared_memory);
+        backward_divergence_device(dev_sigma, dev_div_sigma, grid_spec);
         CUDA_CHECK(cudaDeviceSynchronize());
         backward_divergence_host(sigma, div_sigma_ref, grid_spec);
 
@@ -114,34 +113,18 @@ protected:
 
 /** @brief Check whether derivative in x-direction agrees between device and host
  */
-TEST_F(DerivativeTest, TestXDerivative) { test_derivative(0, false); }
+TEST_F(DerivativeTest, TestXDerivative) { test_derivative(0); }
 
 /** @brief Check whether derivative in y-direction agrees between device and host
  */
-TEST_F(DerivativeTest, TestYDerivative) { test_derivative(1, false); }
+TEST_F(DerivativeTest, TestYDerivative) { test_derivative(1); }
 
 /** @brief Check whether derivative in z-direction agrees between device and host
  */
-TEST_F(DerivativeTest, TestZDerivative) { test_derivative(2, false); }
-
-/** @brief Check whether derivative in x-direction agrees between device (shared) and host
- */
-TEST_F(DerivativeTest, TestXDerivativeShared) { test_derivative(0, true); }
-
-/** @brief Check whether derivative in y-direction agrees between device (shared) and host
- */
-TEST_F(DerivativeTest, TestYDerivativeShared) { test_derivative(1, true); }
-
-/** @brief Check whether derivative in z-direction agrees between device (shared) and host
- */
-TEST_F(DerivativeTest, TestZDerivativeShared) { test_derivative(2, true); }
+TEST_F(DerivativeTest, TestZDerivative) { test_derivative(2); }
 
 /** @brief Check whether divergence agrees between device and host
  */
-TEST_F(DerivativeTest, TestDivergence) { test_divergence(false); }
-
-/** @brief Check whether divergence agrees between device (shared) and host
- */
-TEST_F(DerivativeTest, TestDivergenceShared) { test_divergence(true); }
+TEST_F(DerivativeTest, TestDivergence) { test_divergence(); }
 
 #endif // TEST_DERIVATIVES_HH

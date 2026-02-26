@@ -25,7 +25,7 @@ Ny = 64
 Nz = 64
 
 dtype = jnp.float32
-tolerance = 1.0e-4
+tolerance = 1.0e-3
 depth = 0
 
 grid_spec = GridSpec(N=(Nx, Ny, Nz), h=(Lx / Nx, Ly / Ny, Lz / Nz))

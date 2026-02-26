@@ -27,13 +27,11 @@
  * @param[in] direction coordinate direction in which the derivative is taken
  * @param[in] grid_spec grid specification
  * @param[in] increment increment values instead of overwriting them
- * @param[in] use_shared_memory use shared memory kernels?
  */
 void backward_derivative_device(float *u, float *du,
                                 const int direction,
                                 const GridSpec grid_spec,
-                                const bool increment = false,
-                                const bool use_shared_memory = false);
+                                const bool increment = false);
 
 /** @brief Compute backward derivative in arbitrary direction
  *
@@ -58,11 +56,9 @@ void backward_derivative_host(float *u, float *du,
  * @param[in] dev_sigma: field for which the derivative is computed (device pointer, size 6*ncells)
  * @param[out] dev_div_sigma: resulting divergence (device pointer, size 3*ncells)
  * @param[in] grid_spec: grid specification
- * @param[in] use_shared_memory use shared memory kernels?
  */
 void backward_divergence_device(float *dev_sigma, float *dev_div_sigma,
-                                const GridSpec grid_spec,
-                                const bool use_shared_memory = false);
+                                const GridSpec grid_spec);
 
 /** @brief Compute backward divergence of symmetric tensor on host
  *
