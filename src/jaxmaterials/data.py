@@ -14,9 +14,20 @@ __all__ = ["LayeredFibresDataset", "LayeredFibresDatasetGenerator", "visualise_f
 
 
 class LayeredFibresDataset(torch.utils.data.Dataset):
-    def __init__(self, filename):
+    """Dataset as loaded from disk"""
+
+    def __init__(self, filename, features_last=False):
+        """Initialise dataset
+
+        :arg filename: name of hdf5 file with data
+        :arg features_last: Transpose array to return features in last dimension?
+        """
         with h5py.File(filename, "r") as f:
-            self._lame_parameters = np.array(f["base/lame_parameters"])
+            lame_parameters = f["base/lame_parameters"]
+            self.number_of_cells = list(lame_parameters.shape[-3:])
+            if features_last:
+                lame_parameters = np.transpose(lame_parameters, axes=(0, 2, 3, 4, 1))
+            self._lame_parameters = np.array(lame_parameters)
             self._sigma_bar = np.array(f["base/sigma_bar"])
             self.domain_size = np.array(f.attrs["domain_size"])
             self.n_samples = self._lame_parameters.shape[0]
@@ -27,6 +38,10 @@ class LayeredFibresDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         """Get data
+
+        Return material properties (mu,lambda) and effective elasticity tensor C_{eff}.
+        Depending on the ordering, the resulting tensors are of shape
+        (N_x,N_y,N_z,2), (6,6) or (2,N_x,N_y,N_z), (6,6)
 
         :arg idx: index"""
         return self._lame_parameters[idx, ...], self._sigma_bar[idx, ...]

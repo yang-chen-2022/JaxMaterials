@@ -9,6 +9,8 @@ dependencies = [
     "numpy",
     "matplotlib",
     "jax",
+    "flax",
+    "optax",
     "tqdm",
     "h5py",
     "torch",

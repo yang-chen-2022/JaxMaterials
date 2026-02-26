@@ -10,10 +10,10 @@ from jaxmaterials.data import (
 from jaxmaterials.utilities import save_to_vtk
 
 # Domain
-domain_size = [0.5, 0.3, 0.2]
+domain_size = [0.5, 0.5, 0.2]
 d_void = 0.01
 N = 32
-number_of_cells = [5 * N, 3 * N, 2 * N]
+number_of_cells = [5 * N, 5 * N, 2 * N]
 
 # Distribution of fibre radii
 r_avg = 7.5e-3
@@ -27,7 +27,7 @@ radius_distribution = FibreRadiusDistribution(
 # number of layers with fibres
 nlayers = 3
 
-n_samples = 8
+n_samples = 100
 rng = np.random.default_rng(seed=5713853)
 
 dataset_generator = LayeredFibresDatasetGenerator(
@@ -50,7 +50,7 @@ dataset_generator = LayeredFibresDatasetGenerator(
 )
 
 # Visualise the projected fibre locations for samples
-for k in range(n_samples):
+for k in range(8):
     layer_boundaries, fibre_positions, fibre_radii, fibre_orientations = (
         dataset_generator.generate_fibre_positions()
     )
@@ -70,7 +70,7 @@ dataset = LayeredFibresDataset(filename)
 
 
 # Save gridded material properties to vtk files
-for k in range(n_samples):
+for k in range(8):
     data, sigma_bar = dataset[k]
     save_to_vtk(
         {"mu": data[0], "lambda": data[1]},
