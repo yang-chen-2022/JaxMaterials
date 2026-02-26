@@ -2,7 +2,7 @@
 
 /* **** CUDA kernels **** */
 
-/* Kernel for setting the values of epsilon to the constantbar(epsilon) */
+/* Kernel for setting the values of epsilon to the constant bar(epsilon) */
 __global__ void set_epsilon_bar_kernel(float *dev_epsilon, float *epsilon_bar, const int ncells)
 {
   int ell = blockDim.x * blockIdx.x + threadIdx.x;
