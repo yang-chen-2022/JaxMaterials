@@ -87,9 +87,6 @@ protected:
     /* Set the values of epsilon to bar(epsilon) on the device */
     void set_epsilon_bar(float *dev_epsilon, float *epsilon_bar);
 
-    /* compute divergence in Fourier space */
-    void divergence_fourier(cufftComplex *dev_sigma_hat, cufftComplex *dev_div_sigma_hat);
-
     /* Class variables */
     /** @brief specification of computational grid */
     const GridSpec grid_spec;

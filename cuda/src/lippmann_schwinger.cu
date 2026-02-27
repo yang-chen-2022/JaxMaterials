@@ -50,32 +50,6 @@ __global__ void increment_solution_kernel(float *dev_epsilon, cufftComplex *dev_
   }
 }
 
-/* Kernel for computing stress divergence in Fourier space */
-__global__ void divergence_fourier_kernel(cufftComplex *dev_sigma_hat, float *dev_xi,
-                                          cufftComplex *dev_div_sigma_hat, int ncells)
-{
-  int ell = blockDim.x * blockIdx.x + threadIdx.x;
-  if (ell < ncells)
-  {
-    float xi[3];
-    float sigma_hat_x[6];
-    float sigma_hat_y[6];
-    for (int alpha = 0; alpha < 3; ++alpha)
-      xi[alpha] = dev_xi[alpha * ncells + ell];
-    for (int alpha = 0; alpha < 6; ++alpha)
-    {
-      sigma_hat_x[alpha] = dev_sigma_hat[alpha * ncells + ell].x;
-      sigma_hat_y[alpha] = dev_sigma_hat[alpha * ncells + ell].y;
-    }
-    dev_div_sigma_hat[0 * ncells + ell].x = xi[0] * sigma_hat_x[0] + xi[1] * sigma_hat_x[3] + xi[2] * sigma_hat_x[4];
-    dev_div_sigma_hat[0 * ncells + ell].y = xi[0] * sigma_hat_y[0] + xi[1] * sigma_hat_y[3] + xi[2] * sigma_hat_y[4];
-    dev_div_sigma_hat[1 * ncells + ell].x = xi[0] * sigma_hat_x[3] + xi[1] * sigma_hat_x[1] + xi[2] * sigma_hat_x[5];
-    dev_div_sigma_hat[1 * ncells + ell].y = xi[0] * sigma_hat_y[3] + xi[1] * sigma_hat_y[1] + xi[2] * sigma_hat_y[5];
-    dev_div_sigma_hat[2 * ncells + ell].x = xi[0] * sigma_hat_x[4] + xi[1] * sigma_hat_x[5] + xi[2] * sigma_hat_x[2];
-    dev_div_sigma_hat[2 * ncells + ell].y = xi[0] * sigma_hat_y[4] + xi[1] * sigma_hat_y[5] + xi[2] * sigma_hat_y[2];
-  }
-}
-
 /* **** class methods **** */
 
 /* Set the values of epsilon to bar(epsilon) on the device */
@@ -106,21 +80,12 @@ void LippmannSchwingerSolver::increment_solution(float *dev_epsilon, cufftComple
   increment_solution_kernel<<<nblocks, BLOCKSIZE>>>(dev_epsilon, dev_r, alpha, ndof);
 }
 
-/* compute divergence in Fourier space */
-void LippmannSchwingerSolver::divergence_fourier(cufftComplex *dev_sigma_hat,
-                                                 cufftComplex *dev_div_sigma_hat)
-{
-  int ncells = grid_spec.number_of_cells();
-  const int nblocks = (ncells + BLOCKSIZE - 1) / BLOCKSIZE;
-  divergence_fourier_kernel<<<nblocks, BLOCKSIZE>>>(dev_sigma_hat, dev_xi, dev_div_sigma_hat, ncells);
-}
-
 /* Compute normalised divergence for stopping criterion */
 float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_hat)
 {
   // Compute divergence in Fourier space
-  divergence_fourier(dev_sigma_hat, dev_div_sigma_hat);
-  CUDA_CHECK(cudaDeviceSynchronize());    
+  divergence_fourier(dev_sigma_hat, dev_div_sigma_hat, dev_xi, grid_spec);
+  CUDA_CHECK(cudaDeviceSynchronize());
   int ncells = grid_spec.number_of_cells();
   // STEP 1: Compute nrm_div_sigma =  <||div(sigma)||^2>
   float nrm2_div_sigma = 0;

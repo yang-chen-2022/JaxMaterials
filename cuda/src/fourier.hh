@@ -49,6 +49,20 @@ void initialize_xizero(float *dev_xi_zero, const GridSpec grid_spec);
  */
 void initialize_xizero_host(float *xi_zero, const GridSpec grid_spec);
 
+/** @brief Compute divergence in Fourier space
+ *
+ * Compute xi.sigma
+ *
+ * @param[in] dev_sigma_hat stress in Fourier space (device array, size 6*Ncells)
+ * @param[out] dev_div_sigma_hat resulting divergence xi.sigma (device array, size 3*Ncells)
+ * @param[in] dev_xi Fourier vectors (device array, size 3*Ncells)
+ * @param[in] grid_spec specification of computational grid
+ */
+void divergence_fourier(cufftComplex *dev_sigma_hat,
+                        cufftComplex *dev_div_sigma_hat,
+                        float *dev_xi,
+                        const GridSpec grid_spec);
+
 /** @brief Solve elasticity equation for homogeneous isotropic reference
  * material
  *

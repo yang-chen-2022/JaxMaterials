@@ -114,6 +114,43 @@ void initialize_xizero_host(float *xi_zero,
             }
 }
 
+/* Kernel for computing stress divergence in Fourier space */
+__global__ void divergence_fourier_kernel(cufftComplex *dev_sigma_hat, float *dev_xi,
+                                          cufftComplex *dev_div_sigma_hat, int ncells)
+{
+    int ell = blockDim.x * blockIdx.x + threadIdx.x;
+    if (ell < ncells)
+    {
+        float xi[3];
+        float sigma_hat_x[6];
+        float sigma_hat_y[6];
+        for (int alpha = 0; alpha < 3; ++alpha)
+            xi[alpha] = dev_xi[alpha * ncells + ell];
+        for (int alpha = 0; alpha < 6; ++alpha)
+        {
+            sigma_hat_x[alpha] = dev_sigma_hat[alpha * ncells + ell].x;
+            sigma_hat_y[alpha] = dev_sigma_hat[alpha * ncells + ell].y;
+        }
+        dev_div_sigma_hat[0 * ncells + ell].x = xi[0] * sigma_hat_x[0] + xi[1] * sigma_hat_x[3] + xi[2] * sigma_hat_x[4];
+        dev_div_sigma_hat[0 * ncells + ell].y = xi[0] * sigma_hat_y[0] + xi[1] * sigma_hat_y[3] + xi[2] * sigma_hat_y[4];
+        dev_div_sigma_hat[1 * ncells + ell].x = xi[0] * sigma_hat_x[3] + xi[1] * sigma_hat_x[1] + xi[2] * sigma_hat_x[5];
+        dev_div_sigma_hat[1 * ncells + ell].y = xi[0] * sigma_hat_y[3] + xi[1] * sigma_hat_y[1] + xi[2] * sigma_hat_y[5];
+        dev_div_sigma_hat[2 * ncells + ell].x = xi[0] * sigma_hat_x[4] + xi[1] * sigma_hat_x[5] + xi[2] * sigma_hat_x[2];
+        dev_div_sigma_hat[2 * ncells + ell].y = xi[0] * sigma_hat_y[4] + xi[1] * sigma_hat_y[5] + xi[2] * sigma_hat_y[2];
+    }
+}
+
+/* compute divergence in Fourier space */
+void divergence_fourier(cufftComplex *dev_sigma_hat,
+                        cufftComplex *dev_div_sigma_hat,
+                        float *dev_xi,
+                        const GridSpec grid_spec)
+{
+    int ncells = grid_spec.number_of_cells();
+    const int nblocks = (ncells + BLOCKSIZE - 1) / BLOCKSIZE;
+    divergence_fourier_kernel<<<nblocks, BLOCKSIZE>>>(dev_sigma_hat, dev_xi, dev_div_sigma_hat, ncells);
+}
+
 /* kernel for Fourier solve in homogeneous isotropic reference material */
 __global__ void fourier_solve_kernel(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_hat,
                                      float *dev_xi_zero,
