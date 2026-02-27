@@ -6,7 +6,6 @@ from jax import numpy as jnp
 
 __all__ = [
     "get_xizero",
-    "initialise_material",
     "lippmann_schwinger",
     "lippmann_schwinger_cuda",
 ]
@@ -49,29 +48,6 @@ def get_xizero(grid_spec, dtype=jnp.float64):
     xi_nrm = np.linalg.norm(xi_tilde, axis=0)
     xi_nrm[xi_nrm < 1.0e-12] = 1  # avoid division by zero
     return (xi_tilde / xi_nrm).astype(dtype)
-
-
-def initialise_material(grid_spec, fibre_radius=0.2, dtype=jnp.float64):
-    """Material coefficients lambda and mu evaluated at voxel centres
-
-    Returns two arrays of shape (N_0,N_1,N_2)
-
-    :arg grid_spec: namedtuple with grid specification
-    :arg fibre_radius: radius of fibre
-    :arg dtype: data type
-    """
-    X, Y, Z = np.meshgrid(
-        *[h * (1 / 2 + np.arange(n)) for (n, h) in zip(grid_spec.N, grid_spec.h)],
-        indexing="ij",
-    )
-    mu = np.ones(shape=grid_spec.N) + 0.5 * (
-        (X - 0.5) ** 2 + (Y - 0.5) ** 2 + (Z - 0.5) ** 2 < fibre_radius**2
-    )
-
-    lmbda = np.ones(shape=grid_spec.N) + 0.5 * (
-        (X - 0.5) ** 2 + (Y - 0.5) ** 2 + (Z - 0.5) ** 2 < fibre_radius**2
-    )
-    return jnp.array(mu, dtype=dtype), jnp.array(lmbda, dtype=dtype)
 
 
 def backward_derivative(g, grid_spec, direction):

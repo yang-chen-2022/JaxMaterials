@@ -9,6 +9,27 @@ jax.config.update("jax_enable_x64", True)
 from jax import numpy as jnp
 from jaxmaterials.linear_elasticity import *
 
+def initialise_material(grid_spec, fibre_radius=0.2, dtype=jnp.float64):
+    """Material coefficients lambda and mu evaluated at voxel centres
+
+    Returns two arrays of shape (N_0,N_1,N_2)
+
+    :arg grid_spec: namedtuple with grid specification
+    :arg fibre_radius: radius of fibre
+    :arg dtype: data type
+    """
+    X, Y, Z = np.meshgrid(
+        *[h * (1 / 2 + np.arange(n)) for (n, h) in zip(grid_spec.N, grid_spec.h)],
+        indexing="ij",
+    )
+    mu = np.ones(shape=grid_spec.N) + 0.5 * (
+        (X - 0.5) ** 2 + (Y - 0.5) ** 2 + (Z - 0.5) ** 2 < fibre_radius**2
+    )
+
+    lmbda = np.ones(shape=grid_spec.N) + 0.5 * (
+        (X - 0.5) ** 2 + (Y - 0.5) ** 2 + (Z - 0.5) ** 2 < fibre_radius**2
+    )
+    return jnp.array(mu, dtype=dtype), jnp.array(lmbda, dtype=dtype)
 
 devices = jax.devices()
 print(f"Available Jax devices: {devices}")
