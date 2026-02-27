@@ -29,7 +29,7 @@ We aim to solve the equations of linear elasticity
 \begin{equation}
     \begin{aligned}
         \partial_j \sigma_{ij} &= 0 \\
-        \sigma_{ij} &= C_{ijk\ell} \varepsilon_{k\ell}\qquad\text{with $\varepsilon_{k\ell} = \varepsilon^*_{k\ell} + E_{k\ell}$}\\
+        \sigma_{ij} &= C_{ijk\ell} \varepsilon_{k\ell}\qquad\text{with $\varepsilon_{k\ell} = \varepsilon^*_{k\ell} + \overline{\varepsilon}_{k\ell}$}\\
         \varepsilon^*_{k\ell} &= \frac{1}{2}\left(\partial_k u_\ell + \partial_\ell u_k\right)
     \end{aligned}\label{eqn:continuum_equations}
 \end{equation}
@@ -38,7 +38,7 @@ Here $C=C(x)$ is the given spatially varying elasticity tensor which has the fol
 \begin{equation}
     C(x) = \lambda(x) \delta_{ij}\delta_{k\ell} + \mu(x) (\delta_{ik}\delta_{j\ell} + \delta_{i\ell}\delta_{jk})
 \end{equation}
-$E$ is a constant symmetric tensor and $u=u(x)$ is periodic such that $\int_\Omega u_i(x)\;dx = 0$ and $\int_\Omega \partial_i u_j(x)\;dx = 0$, i.e. $\int_\Omega \varepsilon_{ij}(x)\;dx=0$.
+$\overline{\varepsilon}$ is a constant symmetric tensor representing the average strain and $u=u(x)$ is periodic such that $\int_\Omega u_i(x)\;dx = 0$ and $\int_\Omega \partial_i u_j(x)\;dx = 0$, i.e. $\int_\Omega \varepsilon^*_{ij}(x)\;dx=0$. This implies that $\frac{1}{|\Omega|}\int_\Omega \varepsilon_{ij}(x)\;dx=\overline{\varepsilon}_{ij}$
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Discretisation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -50,8 +50,8 @@ Consider the staggered grid in Fig. 1 of \cite{gelebart2020modified}, with the p
     \hline
 location & variable & \\
 \hline\hline
-\multirow{2}{*}{voxel centres $\mathcal{C}$} & strain & $\varepsilon_{ij}=\frac{1}{2}(\partial_i u_j + \partial_j u_i)$ \\
-& stress & $\sigma_{ij}=C_{ijk\ell} \varepsilon_{k\ell}$ \\
+\multirow{2}{*}{voxel centres $\mathcal{C}$} & strain & $\varepsilon^*_{ij}=\frac{1}{2}(\partial_i u_j + \partial_j u_i)$ \\
+& stress & $\sigma_{ij}=C_{ijk\ell} \varepsilon_{k\ell}$ \\\hline
 \multirow{2}{*}{voxel corners $\mathcal{V}$} & displacement & $u_i$ \\
 & stress divergence & $\partial_i \sigma_{ij}$ \\
 \hline
@@ -77,7 +77,7 @@ Observe that $-\vec{D}^+\cdot \vec{D}^- = -\vec{D}^-\cdot \vec{D}^+$ is an appro
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Fourier expansion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-The Fourier expansion is given by
+The Fourier expansion of a general function $f$ is given by
 \begin{equation}
     \begin{aligned}
 \widehat{f}_{k_0,k_1,k_2} &= \sum_{n_0=0}^{N_0-1}\sum_{n_1=0}^{N_1-1}\sum_{n_2=0}^{N_2-1} f_{n_0,n_1,n_2}\exp\left[-\frac{2\pi i k_0 n_0}{N_0}-\frac{2\pi i k_1 n_1}{N_1}-\frac{2\pi i k_2 n_2}{N_2}\right] \\
@@ -157,27 +157,45 @@ where $\|\cdot\|$ denotes the Euclidean two-norm and we defined
 \widehat{B}_{k\ell ij} &= \mathring{\widetilde{\xi}}_i\mathring{\widetilde{\xi}}_j\mathring{\widetilde{\xi}}_k\mathring{\widetilde{\xi}}_\ell
 \end{aligned}
 \end{equation}
-If we use Voigt's notation \cite{voigt1928lehrbuch} to arrange the six independent components of the symmetric $3\times 3$ tensors $\widehat{\varepsilon}$ and $\widehat{\tau}$ into vectors
-\begin{xalignat}{2}
-    \widehat{\vec{\varepsilon}}^* &= 
+If we use Voigt's notation \cite{voigt1928lehrbuch} and the convention used in the AMITEX code to arrange the six independent components of the symmetric $3\times 3$ tensors $\widehat{\varepsilon}$ and $\widehat{\tau}$ into vectors
+\begin{equation}
+    \begin{aligned}
+    \widehat{\vec{\varepsilon}}^* &=
+    \begin{pmatrix}
+        \widehat{\varepsilon}^*_{0} &
+        \widehat{\varepsilon}^*_{1} &
+        \widehat{\varepsilon}^*_{2} &
+        \widehat{\varepsilon}^*_{3} &
+        \widehat{\varepsilon}^*_{4} &
+        \widehat{\varepsilon}^*_{5}
+    \end{pmatrix}:= 
     \begin{pmatrix}
         \widehat{\varepsilon}^*_{00} &
         \widehat{\varepsilon}^*_{11} &
         \widehat{\varepsilon}^*_{22} &
-        \widehat{\varepsilon}^*_{12} &
+        \widehat{\varepsilon}^*_{01} &
         \widehat{\varepsilon}^*_{02} &
-        \widehat{\varepsilon}^*_{01}
-    \end{pmatrix}, &
+        \widehat{\varepsilon}^*_{12}
+    \end{pmatrix}\\
     \widehat{\vec{\tau}} &= 
+    \begin{pmatrix}
+        \widehat{\tau}_{0} &
+        \widehat{\tau}_{1} &
+        \widehat{\tau}_{2} &
+        \widehat{\tau}_{3} &
+        \widehat{\tau}_{4} &
+        \widehat{\tau}_{5}
+    \end{pmatrix}= 
     \begin{pmatrix}
         \widehat{\tau}_{00} &
         \widehat{\tau}_{11} &
         \widehat{\tau}_{22} &
-        \widehat{\tau}_{12} &
+        \widehat{\tau}_{01} &
         \widehat{\tau}_{02} &
-        \widehat{\tau}_{01}
+        \widehat{\tau}_{12}
     \end{pmatrix}
-\end{xalignat}
+\end{aligned}
+\end{equation}
 we can write
 \begin{equation}
 \widehat{\vec{\varepsilon}}^* = -\frac{1}{\mu^0}\left(\widehat{\vec{\varepsilon}}^{*(A)} - \frac{\lambda^0+\mu^0}{\lambda^0+2\mu^0} \widehat{\vec{\varepsilon}}^{*(B)}\right)
@@ -186,12 +204,12 @@ with
 \begin{equation}
 \begin{aligned}    
     \widehat{\vec{\varepsilon}}^{*(A)} &= \begin{pmatrix}
-    \xir_0^2 \widehat{\tau}_0 + \xir_0(\xir_2\widehat{\tau}_4+\xir_1\widehat{\tau}_5)\\[2ex]
-    \xir_1^2 \widehat{\tau}_1 + \xir_1(\xir_2\widehat{\tau}_3+\xir_0\widehat{\tau}_5)\\[2ex]
-    \xir_2^2 \widehat{\tau}_2 + \xir_2(\xir_1\widehat{\tau}_3+\xir_0\widehat{\tau}_4)\\[2ex]
-    \frac{1}{2}\left(\xir_1\xir_2(\widehat{\tau}_1+\widehat{\tau}_2)+(\xir_1^2+\xir_2^2)\widehat{\tau}_3+\xir_0(\xir_1\widehat{\tau}_4+\xir_2\widehat{\tau}_5)\right)\\[2ex]
-    \frac{1}{2}\left(\xir_0\xir_2(\widehat{\tau}_0+\widehat{\tau}_2)+(\xir_0^2+\xir_2^2)\widehat{\tau}_4+\xir_1(\xir_0\widehat{\tau}_3+\xir_2\widehat{\tau}_5)\right)\\[2ex]
-    \frac{1}{2}\left(\xir_0\xir_1(\widehat{\tau}_0+\widehat{\tau}_1)+(\xir_0^2+\xir_1^2)\widehat{\tau}_5+\xir_2(\xir_0\widehat{\tau}_3+\xir_1\widehat{\tau}_4)\right)
+    \xir_0^2 \widehat{\tau}_0 + \xir_0(\xir_2\widehat{\tau}_4+\xir_1\widehat{\tau}_3)\\[2ex]
+    \xir_1^2 \widehat{\tau}_1 + \xir_1(\xir_2\widehat{\tau}_5+\xir_0\widehat{\tau}_3)\\[2ex]
+    \xir_2^2 \widehat{\tau}_2 + \xir_2(\xir_1\widehat{\tau}_5+\xir_0\widehat{\tau}_4)\\[2ex]
+    \frac{1}{2}\left(\xir_0\xir_1(\widehat{\tau}_0+\widehat{\tau}_1)+(\xir_0^2+\xir_1^2)\widehat{\tau}_3+\xir_2(\xir_0\widehat{\tau}_5+\xir_1\widehat{\tau}_4)\right)\\[2ex]
+    \frac{1}{2}\left(\xir_0\xir_2(\widehat{\tau}_0+\widehat{\tau}_2)+(\xir_0^2+\xir_2^2)\widehat{\tau}_4+\xir_1(\xir_0\widehat{\tau}_5+\xir_2\widehat{\tau}_3)\right)\\[2ex]
+    \frac{1}{2}\left(\xir_1\xir_2(\widehat{\tau}_1+\widehat{\tau}_2)+(\xir_1^2+\xir_2^2)\widehat{\tau}_5+\xir_0(\xir_1\widehat{\tau}_4+\xir_2\widehat{\tau}_3)\right)
     \end{pmatrix}
 \end{aligned}
 \end{equation}
@@ -200,21 +218,21 @@ and
 \begin{aligned}    
     \widehat{\vec{\varepsilon}}^{*(B)} &= 
     \left(
-    \xir_0^2\widehat{\tau}_0+ \xir_1^2\widehat{\tau}_1+ \xir_2^2\widehat{\tau}_2+ 2(\xir_1\xir_2\widehat{\tau}_3+ \xir_0 \xir_2\widehat{\tau}_4+ \xir_0\xir_1\widehat{\tau}_5)
+    \xir_0^2\widehat{\tau}_0+ \xir_1^2\widehat{\tau}_1+ \xir_2^2\widehat{\tau}_2+ 2(\xir_0\xir_1\widehat{\tau}_3+ \xir_0 \xir_2\widehat{\tau}_4+\xir_1\xir_2\widehat{\tau}_5)
     \right)\begin{pmatrix}
-    \xir_0^2 \\[2ex] \xir_1^2 \\[2ex] \xir_2^2 \\[2ex] \xir_1\xir_2 \\[2ex] \xir_0 \xir_2 \\[2ex] \xir_0\xir_1
+    \xir_0^2 \\[2ex] \xir_1^2 \\[2ex] \xir_2^2 \\[2ex] \xir_0\xir_1 \\[2ex] \xir_0 \xir_2 \\[2ex] \xir_1\xir_2
     \end{pmatrix}^\top 
 \end{aligned}
 \end{equation}
-where the expression for $\widehat{\vec{\varepsilon}}^{*(A)}=\widehat{A}\widehat{\vec{\tau}}$ follows from the $6\times 6$ matrix representation of $\widehat{A}_{k\ell ij}$
+where the expression for $\widehat{\vec{\varepsilon}}^{*(A)}=\widehat{A}\widehat{\vec{\tau}}$ follows from the $6\times 6$ matrix representation of $\widehat{A}_{k\ell ij}$ in Voigt's notation
 \begin{equation}
 \widehat{A} = \begin{pmatrix}
-    \xir_0^2 & 0 & 0 & 0 & \xir_0\xir_2 & \xir_0\xir_1 \\[2ex]
-    0 & \xir_1^2 & 0 & \xir_1\xir_2 & 0 & \xir_0\xir_1\\[2ex]
-    0 & 0 & \xir_2^2 & \xir_1\xir_2 & \xir_0\xir_2 & 0\\[2ex]
-    0 & \frac{1}{2}\xir_1\xir_2 & \frac{1}{2}\xir_1\xir_2 & \frac{1}{2}(\xir_1^2+\xir_2^2) & \frac{1}{2}\xir_0\xir_1 & \frac{1}{2}\xir_0\xir_2\\[2ex]
-    \frac{1}{2}\xir_0\xir_2 & 0 & \frac{1}{2}\xir_0\xir_2 & \frac{1}{2}\xir_0\xir_1 & \frac{1}{2}(\xir_0^2+\xir_2^2) & \frac{1}{2}\xir_1\xir_2\\[2ex]
-    \frac{1}{2}\xir_0\xir_1 & \frac{1}{2}\xir_0\xir_1 & 0 & \frac{1}{2}\xir_0\xir_2 & \frac{1}{2}\xir_1\xir_2 & \frac{1}{2}(\xir_0^2+\xir_1^2)
+    \xir_0^2 & 0 & 0 & \xir_0\xir_1 & \xir_0\xir_2 & 0 \\[2ex]
+    0 & \xir_1^2 & 0 & \xir_0\xir_1 & 0 & \xir_1\xir_2\\[2ex]
+    0 & 0 & \xir_2^2 & 0 & \xir_0\xir_2 & \xir_1\xir_2\\[2ex]
+    \frac{1}{2}\xir_0\xir_1 & \frac{1}{2}\xir_0\xir_1 & 0 & \frac{1}{2}(\xir_0^2+\xir_1^2) & \frac{1}{2}\xir_1\xir_2 & \frac{1}{2}\xir_0\xir_2\\[2ex]
+    \frac{1}{2}\xir_0\xir_2 & 0 & \frac{1}{2}\xir_0\xir_2 & \frac{1}{2}\xir_1\xir_2 & \frac{1}{2}(\xir_0^2+\xir_2^2) & \frac{1}{2}\xir_0\xir_1\\[2ex]
+    0 & \frac{1}{2}\xir_1\xir_2 & \frac{1}{2}\xir_1\xir_2 & \frac{1}{2}\xir_0\xir_2 & \frac{1}{2}\xir_0\xir_1 & \frac{1}{2}(\xir_1^2+\xir_2^2)
     \end{pmatrix}
 \end{equation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -233,9 +251,9 @@ We can write $\tau_{ij} = C_{ijk\ell}  \varepsilon_{k\ell}$ explicitly as
 \tau_{00} &= 2\mu\varepsilon_{00} + \lambda\left(\varepsilon_{00}+\varepsilon_{11}+\varepsilon_{22}\right) \\
 \tau_{11} &= 2\mu\varepsilon_{11} + \lambda\left(\varepsilon_{00}+\varepsilon_{11}+\varepsilon_{22}\right)\\
 \tau_{22} &= 2\mu\varepsilon_{22} + \lambda\left(\varepsilon_{00}+\varepsilon_{11}+\varepsilon_{22}\right)\\
-\tau_{12} &= 2\mu\varepsilon_{12}\\
+\tau_{01} &= 2\mu\varepsilon_{01}\\
 \tau_{02} &= 2\mu\varepsilon_{02}\\
-\tau_{01} &= 2\mu\varepsilon_{01}.
+\tau_{12} &= 2\mu\varepsilon_{12}.
 \end{aligned}\label{eqn:tau_computation}
 \end{equation}
 \begin{algorithm}
@@ -248,7 +266,7 @@ We can write $\tau_{ij} = C_{ijk\ell}  \varepsilon_{k\ell}$ explicitly as
     \State{Compute stress correction $\tau_{ij}=\sigma_{ij}-C^0_{ijk\ell} \varepsilon_{k\ell}$}
     \State{Compute $\widehat{\tau}_{ij} = \mathscr{F}[\tau_{ij}]$}\Comment{Fourier-transform}
     \State{Set $\widehat{\varepsilon}^*_{k\ell} = -\widehat{\Gamma}^0_{k\ell ij} \widehat{\tau}_{ij}$}\Comment{Solve in Fourier space}
-    \State{Update $\varepsilon_{k\ell} = \mathscr{F}^{-1}[\widehat{\varepsilon}^*_{k\ell}]+E_{k\ell}$}\Comment{Inverse Fourier-transform}        
+    \State{Update $\varepsilon_{k\ell} = \mathscr{F}^{-1}[\widehat{\varepsilon}^*_{k\ell}]+E\overline{\varepsilon}_{k\ell}$}\Comment{Inverse Fourier-transform}        
     \EndFor
 \State{\Return $\varepsilon$}
 \end{algorithmic}
@@ -262,7 +280,7 @@ We can write $\tau_{ij} = C_{ijk\ell}  \varepsilon_{k\ell}$ explicitly as
     \State{Check convergence based on $D^-_j \sigma_{ij}$}    
     \State{Compute $\widehat{\sigma}_{ij} = \mathscr{F}[\sigma_{ij}]$}\Comment{Fourier-transform}
     \State{Compute $\widehat{r}_{k\ell} = -\widehat{\Gamma}^0_{k\ell ij} \widehat{\sigma}_{ij}$}\Comment{Solve in Fourier space}
-    \State{Compute $r_{ij} = \mathscr{F}[\widehat{r}_{ij}]$}\Comment{Inverse Fourier-transform}
+    \State{Compute $r_{ij} = \mathscr{F}^{-1}[\widehat{r}_{ij}]$}\Comment{Inverse Fourier-transform}
     \State{Update $\varepsilon_{k\ell} \mapsto \varepsilon_{k\ell} + r_{k\ell}$}
     \EndFor
 \State{\Return $\varepsilon$}
@@ -289,7 +307,7 @@ The Lippmann-Schwinger algorithm with Anderson acceleration \cite{wicht2021ander
     \State{Set $A_{st}\gets A_{s-1,t-1}$}
     \EndFor
     \EndFor
-    \State{Compute $r^{(0)}_{ij} = \mathscr{F}[\widehat{r}_{ij}]$}\Comment{Inverse Fourier-transform}
+    \State{Compute $r^{(0)}_{ij} = \mathscr{F}^{-1}[\widehat{r}_{ij}]$}\Comment{Inverse Fourier-transform}
     \For{$s=0,1,2,\dots,m_k$}
     \State{Set $A_{0s} = A_{s0}\gets r^{(0)}_{ij}r^{(s)}_{ij}$}
     \EndFor

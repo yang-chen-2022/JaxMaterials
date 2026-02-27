@@ -115,13 +115,13 @@ def backward_divergence(sigma, grid_spec):
     return jnp.stack(
         [
             backward_derivative(sigma[0, ...], grid_spec, 0)
-            + backward_derivative(sigma[5, ...], grid_spec, 1)
-            + backward_derivative(sigma[4, ...], grid_spec, 2),
-            backward_derivative(sigma[5, ...], grid_spec, 0)
-            + backward_derivative(sigma[1, ...], grid_spec, 1)
-            + backward_derivative(sigma[3, ...], grid_spec, 2),
-            backward_derivative(sigma[4, ...], grid_spec, 0)
             + backward_derivative(sigma[3, ...], grid_spec, 1)
+            + backward_derivative(sigma[4, ...], grid_spec, 2),
+            backward_derivative(sigma[3, ...], grid_spec, 0)
+            + backward_derivative(sigma[1, ...], grid_spec, 1)
+            + backward_derivative(sigma[5, ...], grid_spec, 2),
+            backward_derivative(sigma[4, ...], grid_spec, 0)
+            + backward_derivative(sigma[5, ...], grid_spec, 1)
             + backward_derivative(sigma[2, ...], grid_spec, 2),
         ]
     )
@@ -141,20 +141,20 @@ def fourier_solve(tau_hat, lmbda0, mu0, xizero):
         [
             xizero[0, ...] ** 2 * tau_hat[0, ...]
             + xizero[0, ...]
-            * (xizero[2, ...] * tau_hat[4, ...] + xizero[1, ...] * tau_hat[5]),
+            * (xizero[2, ...] * tau_hat[4, ...] + xizero[1, ...] * tau_hat[3]),
             xizero[1, ...] ** 2 * tau_hat[1, ...]
             + xizero[1, ...]
-            * (xizero[2, ...] * tau_hat[3, ...] + xizero[0, ...] * tau_hat[5]),
+            * (xizero[2, ...] * tau_hat[5, ...] + xizero[0, ...] * tau_hat[3]),
             xizero[2, ...] ** 2 * tau_hat[2, ...]
             + xizero[2, ...]
-            * (xizero[1, ...] * tau_hat[3, ...] + xizero[0, ...] * tau_hat[4]),
+            * (xizero[1, ...] * tau_hat[5, ...] + xizero[0, ...] * tau_hat[4]),
             1
             / 2
             * (
-                xizero[1, ...] * xizero[2, ...] * (tau_hat[1, ...] + tau_hat[2, ...])
-                + (xizero[1, ...] ** 2 + xizero[2, ...] ** 2) * tau_hat[3, ...]
-                + xizero[0, ...]
-                * (xizero[1, ...] * tau_hat[4, ...] + xizero[2, ...] * tau_hat[5, ...])
+                xizero[0, ...] * xizero[1, ...] * (tau_hat[0, ...] + tau_hat[1, ...])
+                + (xizero[0, ...] ** 2 + xizero[1, ...] ** 2) * tau_hat[3, ...]
+                + xizero[2, ...]
+                * (xizero[0, ...] * tau_hat[5, ...] + xizero[1, ...] * tau_hat[4, ...])
             ),
             1
             / 2
@@ -162,15 +162,15 @@ def fourier_solve(tau_hat, lmbda0, mu0, xizero):
                 xizero[0, ...] * xizero[2, ...] * (tau_hat[0, ...] + tau_hat[2, ...])
                 + (xizero[0, ...] ** 2 + xizero[2, ...] ** 2) * tau_hat[4, ...]
                 + xizero[1, ...]
-                * (xizero[0, ...] * tau_hat[3, ...] + xizero[2, ...] * tau_hat[5, ...])
+                * (xizero[0, ...] * tau_hat[5, ...] + xizero[2, ...] * tau_hat[3, ...])
             ),
             1
             / 2
             * (
-                xizero[0, ...] * xizero[1, ...] * (tau_hat[0, ...] + tau_hat[1, ...])
-                + (xizero[0, ...] ** 2 + xizero[1, ...] ** 2) * tau_hat[5, ...]
-                + xizero[2, ...]
-                * (xizero[0, ...] * tau_hat[3, ...] + xizero[1, ...] * tau_hat[4, ...])
+                xizero[1, ...] * xizero[2, ...] * (tau_hat[1, ...] + tau_hat[2, ...])
+                + (xizero[1, ...] ** 2 + xizero[2, ...] ** 2) * tau_hat[5, ...]
+                + xizero[0, ...]
+                * (xizero[1, ...] * tau_hat[4, ...] + xizero[2, ...] * tau_hat[3, ...])
             ),
         ]
     )
@@ -179,9 +179,9 @@ def fourier_solve(tau_hat, lmbda0, mu0, xizero):
             xizero[0, ...] ** 2,
             xizero[1, ...] ** 2,
             xizero[2, ...] ** 2,
-            xizero[1, ...] * xizero[2, ...],
-            xizero[0, ...] * xizero[2, ...],
             xizero[0, ...] * xizero[1, ...],
+            xizero[0, ...] * xizero[2, ...],
+            xizero[1, ...] * xizero[2, ...],
         ]
     )
     Xi_dot_tau = (
@@ -190,9 +190,9 @@ def fourier_solve(tau_hat, lmbda0, mu0, xizero):
         + xizero[2, ...] ** 2 * tau_hat[2, ...]
         + 2
         * (
-            xizero[1, ...] * xizero[2, ...] * tau_hat[3, ...]
+            xizero[0, ...] * xizero[1, ...] * tau_hat[3, ...]
             + xizero[0, ...] * xizero[2, ...] * tau_hat[4, ...]
-            + xizero[0, ...] * xizero[1, ...] * tau_hat[5, ...]
+            + xizero[1, ...] * xizero[2, ...] * tau_hat[5, ...]
         )
     )
     epsilon_hat_B = Xi * Xi_dot_tau
