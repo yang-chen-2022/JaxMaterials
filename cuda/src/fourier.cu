@@ -1,5 +1,5 @@
 /* Implementation of fourier_solve_device.hh */
-#include "fourier_solve.hh"
+#include "fourier.hh"
 
 /* kernel to initialize Fourier vectors */
 __global__ void initialize_xi_kernel(float *dev_xi, const GridSpec grid_spec)

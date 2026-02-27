@@ -4,7 +4,7 @@
 #include "cufft.h"
 #include <algorithm>
 #include "derivatives.hh"
-#include "fourier_solve.hh"
+#include "fourier.hh"
 #include <gtest/gtest.h>
 
 class FourierSolveTest : public ::testing::Test

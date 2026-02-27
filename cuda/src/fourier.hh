@@ -1,5 +1,5 @@
-#ifndef FOURIER_SOLVE_HH
-#define FOURIER_SOLVE_HH FOURIER_SOLVE_HH
+#ifndef FOURIER_HH
+#define FOURIER_HH FOURIER_HH
 #include "cufft.h"
 #include "common.hh"
 
@@ -67,4 +67,4 @@ void fourier_solve_device(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_h
                           float *dev_xi_zero, const float lambda_0,
                           const float mu_0, const GridSpec grid_spec);
 
-#endif // FOURIER_SOLVE_HH
+#endif // FOURIER_HH

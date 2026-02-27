@@ -6,7 +6,7 @@
 #include "cublas_v2.h"
 #include "common.hh"
 #include "derivatives.hh"
-#include "fourier_solve.hh"
+#include "fourier.hh"
 
 class LippmannSchwingerSolver
 {

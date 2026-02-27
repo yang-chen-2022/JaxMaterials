@@ -9,7 +9,7 @@ target_sources(lippmannschwinger
     PRIVATE        
         common.cc
         derivatives.cu        
-        fourier_solve.cu
+        fourier.cu
         profile.cu
         lippmann_schwinger.cu
         
@@ -18,7 +18,7 @@ target_sources(lippmannschwinger
         FILES            
             common.hh
             derivatives.hh                        
-            fourier_solve.hh
+            fourier.hh
             profile.hh
             lippmann_schwinger.hh
 )
