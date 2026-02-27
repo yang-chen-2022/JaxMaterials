@@ -195,22 +195,22 @@ void backward_derivative_host(float *u, float *du,
 
 /* Compute backward divergence of symmetric tensor on device */
 void backward_divergence_device(float *dev_sigma, float *dev_div_sigma,
-                                const  GridSpec grid_spec)
+                                const GridSpec grid_spec)
 {
   int ncells = grid_spec.number_of_cells();
   // Derivatives in x-direction
   backward_derivative_device(dev_sigma + 0 * ncells, dev_div_sigma + 0 * ncells, 0, grid_spec, false);
-  backward_derivative_device(dev_sigma + 5 * ncells, dev_div_sigma + 1 * ncells, 0, grid_spec, false);
+  backward_derivative_device(dev_sigma + 3 * ncells, dev_div_sigma + 1 * ncells, 0, grid_spec, false);
   backward_derivative_device(dev_sigma + 4 * ncells, dev_div_sigma + 2 * ncells, 0, grid_spec, false);
   CUDA_CHECK(cudaDeviceSynchronize());
   // Derivatives in y-direction
-  backward_derivative_device(dev_sigma + 5 * ncells, dev_div_sigma + 0 * ncells, 1, grid_spec, true);
+  backward_derivative_device(dev_sigma + 3 * ncells, dev_div_sigma + 0 * ncells, 1, grid_spec, true);
   backward_derivative_device(dev_sigma + 1 * ncells, dev_div_sigma + 1 * ncells, 1, grid_spec, true);
-  backward_derivative_device(dev_sigma + 3 * ncells, dev_div_sigma + 2 * ncells, 1, grid_spec, true);
+  backward_derivative_device(dev_sigma + 5 * ncells, dev_div_sigma + 2 * ncells, 1, grid_spec, true);
   CUDA_CHECK(cudaDeviceSynchronize());
   // Derivatives in z-direction
   backward_derivative_device(dev_sigma + 4 * ncells, dev_div_sigma + 0 * ncells, 2, grid_spec, true);
-  backward_derivative_device(dev_sigma + 3 * ncells, dev_div_sigma + 1 * ncells, 2, grid_spec, true);
+  backward_derivative_device(dev_sigma + 5 * ncells, dev_div_sigma + 1 * ncells, 2, grid_spec, true);
   backward_derivative_device(dev_sigma + 2 * ncells, dev_div_sigma + 2 * ncells, 2, grid_spec, true);
   CUDA_CHECK(cudaDeviceSynchronize());
 }
@@ -222,14 +222,14 @@ void backward_divergence_host(float *sigma, float *div_sigma,
   int ncells = grid_spec.number_of_cells();
   // Derivatives in x-direction
   backward_derivative_host(sigma + 0 * ncells, div_sigma + 0 * ncells, 0, grid_spec, false);
-  backward_derivative_host(sigma + 5 * ncells, div_sigma + 1 * ncells, 0, grid_spec, false);
+  backward_derivative_host(sigma + 3 * ncells, div_sigma + 1 * ncells, 0, grid_spec, false);
   backward_derivative_host(sigma + 4 * ncells, div_sigma + 2 * ncells, 0, grid_spec, false);
   // Derivatives in y-direction
-  backward_derivative_host(sigma + 5 * ncells, div_sigma + 0 * ncells, 1, grid_spec, true);
+  backward_derivative_host(sigma + 3 * ncells, div_sigma + 0 * ncells, 1, grid_spec, true);
   backward_derivative_host(sigma + 1 * ncells, div_sigma + 1 * ncells, 1, grid_spec, true);
-  backward_derivative_host(sigma + 3 * ncells, div_sigma + 2 * ncells, 1, grid_spec, true);
+  backward_derivative_host(sigma + 5 * ncells, div_sigma + 2 * ncells, 1, grid_spec, true);
   // Derivatives in z-direction
   backward_derivative_host(sigma + 4 * ncells, div_sigma + 0 * ncells, 2, grid_spec, true);
-  backward_derivative_host(sigma + 3 * ncells, div_sigma + 1 * ncells, 2, grid_spec, true);
+  backward_derivative_host(sigma + 5 * ncells, div_sigma + 1 * ncells, 2, grid_spec, true);
   backward_derivative_host(sigma + 2 * ncells, div_sigma + 2 * ncells, 2, grid_spec, true);
 }

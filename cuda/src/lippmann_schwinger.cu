@@ -67,12 +67,12 @@ __global__ void divergence_fourier_kernel(cufftComplex *dev_sigma_hat, float *de
       sigma_hat_x[alpha] = dev_sigma_hat[alpha * ncells + ell].x;
       sigma_hat_y[alpha] = dev_sigma_hat[alpha * ncells + ell].y;
     }
-    dev_div_sigma_hat[0 * ncells + ell].x = xi[0] * sigma_hat_x[0] + xi[1] * sigma_hat_x[5] + xi[2] * sigma_hat_x[4];
-    dev_div_sigma_hat[0 * ncells + ell].y = xi[0] * sigma_hat_y[0] + xi[1] * sigma_hat_y[5] + xi[2] * sigma_hat_y[4];
-    dev_div_sigma_hat[1 * ncells + ell].x = xi[0] * sigma_hat_x[5] + xi[1] * sigma_hat_x[1] + xi[2] * sigma_hat_x[3];
-    dev_div_sigma_hat[1 * ncells + ell].y = xi[0] * sigma_hat_y[5] + xi[1] * sigma_hat_y[1] + xi[2] * sigma_hat_y[3];
-    dev_div_sigma_hat[2 * ncells + ell].x = xi[0] * sigma_hat_x[4] + xi[1] * sigma_hat_x[3] + xi[2] * sigma_hat_x[2];
-    dev_div_sigma_hat[2 * ncells + ell].y = xi[0] * sigma_hat_y[4] + xi[1] * sigma_hat_y[3] + xi[2] * sigma_hat_y[2];
+    dev_div_sigma_hat[0 * ncells + ell].x = xi[0] * sigma_hat_x[0] + xi[1] * sigma_hat_x[3] + xi[2] * sigma_hat_x[4];
+    dev_div_sigma_hat[0 * ncells + ell].y = xi[0] * sigma_hat_y[0] + xi[1] * sigma_hat_y[3] + xi[2] * sigma_hat_y[4];
+    dev_div_sigma_hat[1 * ncells + ell].x = xi[0] * sigma_hat_x[3] + xi[1] * sigma_hat_x[1] + xi[2] * sigma_hat_x[5];
+    dev_div_sigma_hat[1 * ncells + ell].y = xi[0] * sigma_hat_y[3] + xi[1] * sigma_hat_y[1] + xi[2] * sigma_hat_y[5];
+    dev_div_sigma_hat[2 * ncells + ell].x = xi[0] * sigma_hat_x[4] + xi[1] * sigma_hat_x[5] + xi[2] * sigma_hat_x[2];
+    dev_div_sigma_hat[2 * ncells + ell].y = xi[0] * sigma_hat_y[4] + xi[1] * sigma_hat_y[5] + xi[2] * sigma_hat_y[2];
   }
 }
 

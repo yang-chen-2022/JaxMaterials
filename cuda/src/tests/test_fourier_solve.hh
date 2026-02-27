@@ -159,12 +159,12 @@ TEST_F(FourierSolveTest, TestDivSigmaFourier)
     }
 
     // Compute three components of dot-product xi.sigma
-    xi_sigma[0].x = xi[0] * sigma[0].x + xi[1] * sigma[5].x + xi[2] * sigma[4].x;
-    xi_sigma[0].y = xi[0] * sigma[0].y + xi[1] * sigma[5].y + xi[2] * sigma[4].y;
-    xi_sigma[1].x = xi[0] * sigma[5].x + xi[1] * sigma[1].x + xi[2] * sigma[3].x;
-    xi_sigma[1].y = xi[0] * sigma[5].y + xi[1] * sigma[1].y + xi[2] * sigma[3].y;
-    xi_sigma[2].x = xi[0] * sigma[4].x + xi[1] * sigma[3].x + xi[2] * sigma[2].x;
-    xi_sigma[2].y = xi[0] * sigma[4].y + xi[1] * sigma[3].y + xi[2] * sigma[2].y;
+    xi_sigma[0].x = xi[0] * sigma[0].x + xi[1] * sigma[3].x + xi[2] * sigma[4].x;
+    xi_sigma[0].y = xi[0] * sigma[0].y + xi[1] * sigma[3].y + xi[2] * sigma[4].y;
+    xi_sigma[1].x = xi[0] * sigma[3].x + xi[1] * sigma[1].x + xi[2] * sigma[5].x;
+    xi_sigma[1].y = xi[0] * sigma[3].y + xi[1] * sigma[1].y + xi[2] * sigma[5].y;
+    xi_sigma[2].x = xi[0] * sigma[4].x + xi[1] * sigma[5].x + xi[2] * sigma[2].x;
+    xi_sigma[2].y = xi[0] * sigma[4].y + xi[1] * sigma[5].y + xi[2] * sigma[2].y;
     // update (squared) norms
     for (int mu = 0; mu < 3; ++mu)
       div_nrm2 += xi_sigma[mu].x * xi_sigma[mu].x + xi_sigma[mu].y * xi_sigma[mu].y;
