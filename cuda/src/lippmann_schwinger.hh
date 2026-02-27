@@ -81,9 +81,8 @@ protected:
      *      sqrt(<||xi.hat(sigma)||^2>) / ||hat(sigma)(0)||
      *
      * @param[in] dev_sigma_hat stress in Fourier space
-     * @param[in] dev_div_sigma_hat divergence of stress in Fourier space
      */
-    float relative_divergence_norm(cufftComplex *dev_sigma_hat, cufftComplex *dev_div_sigma_hat);
+    float relative_divergence_norm(cufftComplex *dev_sigma_hat);
 
     /* Set the values of epsilon to bar(epsilon) on the device */
     void set_epsilon_bar(float *dev_epsilon, float *epsilon_bar);

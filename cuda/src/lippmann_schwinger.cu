@@ -116,9 +116,11 @@ void LippmannSchwingerSolver::divergence_fourier(cufftComplex *dev_sigma_hat,
 }
 
 /* Compute normalised divergence for stopping criterion */
-float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_hat,
-                                                        cufftComplex *dev_div_sigma_hat)
+float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_hat)
 {
+  // Compute divergence in Fourier space
+  divergence_fourier(dev_sigma_hat, dev_div_sigma_hat);
+  CUDA_CHECK(cudaDeviceSynchronize());    
   int ncells = grid_spec.number_of_cells();
   // STEP 1: Compute nrm_div_sigma =  <||div(sigma)||^2>
   float nrm2_div_sigma = 0;
@@ -215,10 +217,7 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
     CUFFT_CHECK(cufftExecC2C(plan, dev_sigma_hat, dev_sigma_hat, CUFFT_FORWARD));
     CUDA_CHECK(cudaDeviceSynchronize());
     /* ==== STEP 3 ==== Check convergence */
-    // Compute divergence in Fourier space
-    divergence_fourier(dev_sigma_hat, dev_div_sigma_hat);
-    CUDA_CHECK(cudaDeviceSynchronize());
-    rel_div_norm = relative_divergence_norm(dev_sigma_hat, dev_div_sigma_hat);
+    rel_div_norm = relative_divergence_norm(dev_sigma_hat);
     printf("rel divergence norm = %e\n", rel_div_norm);
     if (rel_div_norm < tolerance)
       break;
