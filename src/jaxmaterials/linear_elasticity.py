@@ -6,6 +6,9 @@ from jax import numpy as jnp
 
 __all__ = [
     "get_xizero",
+    "get_xi",
+    "relative_divergence",
+    "relative_divergence_fourier",
     "lippmann_schwinger",
     "lippmann_schwinger_cuda",
 ]
@@ -48,6 +51,42 @@ def get_xizero(grid_spec, dtype=jnp.float64):
     xi_nrm = np.linalg.norm(xi_tilde, axis=0)
     xi_nrm[xi_nrm < 1.0e-12] = 1  # avoid division by zero
     return (xi_tilde / xi_nrm).astype(dtype)
+
+
+def get_xi(grid_spec, dtype=jnp.float64):
+    """Construct the un-normalised frequency vectors
+
+    Let k = (k_0,k_1,k_2) with k_d = 0,1,...,N_d-1 be a three-dimensional Fourier index.
+
+    The normalised momentum vector is xi_d = 2 pi k_d / N_d, with 0 <= xi_0 < 2pi
+
+    For a given k we then have that
+
+    tilde(xi)_0 = 2/h_0 * sin(xi_0/2) * cos(xi_1/2) * cos(xi_2/2)
+    tilde(xi)_1 = 2/h_1 * cos(xi_0/2) * sin(xi_1/2) * cos(xi_2/2)
+    tilde(xi)_2 = 2/h_2 * cos(xi_0/2) * cos(xi_1/2) * sin(xi_2/2)
+
+    This function returns a tensor of shape (3,N_0,N_1,N_2) which contains
+    the normalised xi^0 = tilde(xi) for all Fourier modes.
+
+     :arg grid_spec: namedtuple with grid specifications
+     :arg dtype: data type
+
+    """
+    # Normalised momentum vectors in all three spatial directions
+    K = [2 * np.pi * np.arange(n) / n for n in grid_spec.N]
+    # Grid with normalised momentum vectors
+    xi = np.meshgrid(*K, indexing="ij")
+    h = grid_spec.h
+    # Grid with tilde(xi)
+    xi = np.stack(
+        [
+            2 / h[0] * np.sin(xi[0] / 2) * np.cos(xi[1] / 2) * np.cos(xi[2] / 2),
+            2 / h[1] * np.cos(xi[0] / 2) * np.sin(xi[1] / 2) * np.cos(xi[2] / 2),
+            2 / h[2] * np.cos(xi[0] / 2) * np.cos(xi[1] / 2) * np.sin(xi[2] / 2),
+        ]
+    )
+    return xi.astype(dtype)
 
 
 def backward_derivative(g, grid_spec, direction):
@@ -218,20 +257,46 @@ def compute_sigma(lmbda, mu, epsilon):
 
 
 def relative_divergence(sigma, grid_spec):
-    """Compute ratio divergence div(sigma)_i = d sigma_{ij} / dx_j  and <||div(sigma)||^2>^{1/2}
+    """Compute ratio of the norm of div(sigma) and the norm of the average sigma
 
     :arg sigma: stress
     :arg grid_spec: grid specification
     """
-    dV = grid_spec.h[0] * grid_spec.h[1] * grid_spec.h[2]
+    N = grid_spec.N[0] * grid_spec.N[1] * grid_spec.N[2]
     dsigma = backward_divergence(sigma, grid_spec)
-    dsigma_nrm = jnp.sqrt(jnp.sum(dsigma**2) * dV)
-    # Compute average <sigma> and norm ||<sigma>||
-    sigma_avg = jnp.sum(sigma * dV, axis=[1, 2, 3])
-    sigma_avg_nrm = jnp.sqrt(
-        (jnp.sum(sigma_avg[:3] ** 2) + 2 * jnp.sum(sigma_avg[3:] ** 2))
+    dsigma_nrm2 = jnp.sum(dsigma**2) / N
+    sigma_avg = jnp.sum(sigma, axis=[1, 2, 3]) / N
+    sigma_avg_nrm2 = jnp.sum(sigma_avg[:3] ** 2) + 2 * jnp.sum(sigma_avg[3:] ** 2)
+    return jnp.sqrt(dsigma_nrm2 / sigma_avg_nrm2)
+
+
+def relative_divergence_fourier(sigma_hat, xi, grid_spec):
+    """Compute ratio of the norm of div(sigma) and the norm of the average sigma in Fourier space
+
+    :arg sigma_hat: stress in Fourier space
+    :arg xi: Fourier vectors
+    :arg grid_spec: grid specification
+    """
+    N = grid_spec.N[0] * grid_spec.N[1] * grid_spec.N[2]
+    dsigma_hat = jnp.stack(
+        [
+            xi[0, ...] * sigma_hat[0, ...]
+            + xi[1, ...] * sigma_hat[3, ...]
+            + xi[2, ...] * sigma_hat[4, ...],
+            xi[0, ...] * sigma_hat[3, ...]
+            + xi[1, ...] * sigma_hat[1, ...]
+            + xi[2, ...] * sigma_hat[5, ...],
+            xi[0, ...] * sigma_hat[4, ...]
+            + xi[1, ...] * sigma_hat[5, ...]
+            + xi[2, ...] * sigma_hat[2, ...],
+        ]
     )
-    return dsigma_nrm / sigma_avg_nrm
+    dsigma_nrm2 = jnp.sum(jnp.abs(dsigma_hat) ** 2) / N
+    sigma_hat_zero = jnp.real(sigma_hat[:, 0, 0, 0])
+    sigma_hat_zero_nrm2 = jnp.sum(sigma_hat_zero[:3] ** 2) + 2 * jnp.sum(
+        sigma_hat_zero[3:] ** 2
+    )
+    return jnp.sqrt(N * dsigma_nrm2 / sigma_hat_zero_nrm2)
 
 
 @jax.jit(static_argnames=["grid_spec", "tolerance", "depth"])
@@ -253,6 +318,7 @@ def lippmann_schwinger(
     lmbda0 = 1 / 2 * (jnp.min(lmbda) + jnp.max(lmbda))
     # Fourier vectors
     xizero = get_xizero(grid_spec, dtype=E_mean.dtype)
+    xi = get_xi(grid_spec, dtype=E_mean.dtype)
     # storage for solution and residual, arrays of shape (d+1,6,Nx,Ny,Nz)
     epsilon = jnp.zeros(
         (depth + 1, 6) + grid_spec.N,
@@ -264,16 +330,18 @@ def lippmann_schwinger(
     A_anderson = jnp.eye(depth + 1, dtype=epsilon.dtype)
     u_rhs = jnp.zeros(depth + 1, dtype=epsilon.dtype)
     sigma = compute_sigma(lmbda, mu, epsilon[0, ...])
+    # Fourier transform sigma
+    sigma_hat = jnp.fft.fftn(sigma, axes=[-3, -2, -1])
 
     def exit_condition(state):
         """Check exit condition
 
         Check whether <||div(sigma)||> / ||<sigma>|| > tolerance or iter < maxiter
 
-        :arg state: current iteration state (epsilon, residual, sigma, A, iter)
+        :arg state: current iteration state (epsilon, residual, sigma, sigma_hat, A, iter)
         """
-        epsilon, residual, sigma, A_anderson, u_rhs, iter = state
-        rel_error = relative_divergence(sigma, grid_spec)
+        epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter = state
+        rel_error = relative_divergence_fourier(sigma_hat, xi, grid_spec)
         return (rel_error > tolerance) & (iter < maxiter)
 
     def loop_body(state):
@@ -281,9 +349,7 @@ def lippmann_schwinger(
 
         :arg state: current iteration state (epsilon, residual, sigma, A, iter)
         """
-        epsilon, residual, sigma, A_anderson, u_rhs, iter = state
-        # Fourier transform sigma
-        sigma_hat = jnp.fft.fftn(sigma, axes=[-3, -2, -1])
+        epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter = state
         # Solve reference problem hat{epsilon}_{kl} = -Gamma^0_{klij} hat{tau}_{ij}
         r_hat = fourier_solve(sigma_hat, lmbda0, mu0, xizero)
         r = jnp.real(jnp.fft.ifftn(r_hat, axes=[-3, -2, -1]))
@@ -305,13 +371,15 @@ def lippmann_schwinger(
         epsilon = jnp.roll(epsilon, 1, axis=0)
         epsilon = epsilon.at[0, ...].set(epsilon_tilde)
         sigma = compute_sigma(lmbda, mu, epsilon[0, ...])
+        # Fourier transform sigma
+        sigma_hat = jnp.fft.fftn(sigma, axes=[-3, -2, -1])
         iter += 1
-        return (epsilon, residual, sigma, A_anderson, u_rhs, iter)
+        return (epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter)
 
-    epsilon, residual, sigma, A_anderson, u_rhs, iter = jax.lax.while_loop(
+    epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter = jax.lax.while_loop(
         exit_condition,
         loop_body,
-        init_val=(epsilon, residual, sigma, A_anderson, u_rhs, 0),
+        init_val=(epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, 0),
     )
 
     return epsilon[0, ...], sigma, iter

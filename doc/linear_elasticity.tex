@@ -256,8 +256,10 @@ We can write $\tau_{ij} = C_{ijk\ell}  \varepsilon_{k\ell}$ explicitly as
 \tau_{12} &= 2\mu\varepsilon_{12}.
 \end{aligned}\label{eqn:tau_computation}
 \end{equation}
+This leads to the Lippmann Schwinger iteration shown in \cref{alg:lippmann_schwinger}. Alternatively the method can be written in residual form as in \cref{alg:lippmann_schwinger_residual}.
 \begin{algorithm}
     \caption{Lippmann Schwinger iteration: simplest formulation}
+    \label{alg:lippmann_schwinger}
 \begin{algorithmic}[1]
     \State{Set $\varepsilon=E$}
     \For{$n=0,1,\dots$}
@@ -273,6 +275,7 @@ We can write $\tau_{ij} = C_{ijk\ell}  \varepsilon_{k\ell}$ explicitly as
 \end{algorithm}
 \begin{algorithm}
     \caption{Lippmann Schwinger iteration: residual formulation}
+    \label{alg:lippmann_schwinger_residual}
 \begin{algorithmic}[1]
     \State{Set $\varepsilon=E$}
     \For{$n=0,1,\dots$}
@@ -286,6 +289,49 @@ We can write $\tau_{ij} = C_{ijk\ell}  \varepsilon_{k\ell}$ explicitly as
 \State{\Return $\varepsilon$}
 \end{algorithmic}
 \end{algorithm}
+\subsection{Stopping criterion}
+The stopping criterion in \cite{moulinec1998numerical} is given by
+\begin{equation}
+    R(\sigma) = \frac{\sqrt{\langle \|\nabla \cdot \sigma\|^2\rangle_\Omega}}{\|\langle\sigma\rangle_\Omega\|} \le \epsilon\label{eqn:stopping_criterion}
+\end{equation}
+where $\|\cdot\|$ denotes the two-norm and $\langle f \rangle_\Omega = \frac{1}{|\Omega|}\int_\Omega f\;dx$ is the spatial average of $f$. In a discrete setting the left hand side of \eqref{eqn:stopping_criterion} can be written as
+\begin{equation}
+    R(\sigma) = \frac{\sqrt{\langle\|D^-\cdot \sigma\|^2\rangle}}{\|\langle \sigma \rangle\|} = \frac{\sqrt{N\langle\|\xi\cdot \widehat{\sigma}\|^2\rangle}}{\|\widehat{\sigma}_{\vec{\xi}=0}\|} =: \widehat{R}(\widehat{\sigma})
+\end{equation}
+where $\widehat{\sigma}$ is the Fourier transform of $\sigma$ and now $\langle f \rangle = \frac{1}{N}\sum_{\vec{n}} f_{\vec{n}}$ with $N:=N_0N_1N_2$ the total number of voxels.
+Define
+\begin{equation}
+    \begin{aligned}
+\delta &:= D^-\cdot \sigma = 
+\begin{pmatrix}
+    D^-_0 \sigma_0 + D^-_1 \sigma_3 + D^-_2 \sigma_4\\
+    D^-_0 \sigma_3 + D^-_1 \sigma_1 + D^-_2 \sigma_5\\
+    D^-_0 \sigma_4 + D^-_1 \sigma_5 + D^-_2 \sigma_2
+\end{pmatrix}
+=-ie^{i\eta} \xi \cdot \widehat{\sigma}\\[2ex]
+\widehat{\delta} &:= \xi \cdot \widehat{\sigma} =
+\begin{pmatrix}
+    \xi_0 \widehat{\sigma}_0 + \xi_1 \widehat{\sigma}_3 + \xi_2 \widehat{\sigma}_4\\
+    \xi_0 \widehat{\sigma}_3 + \xi_1 \widehat{\sigma}_1 + \xi_2 \widehat{\sigma}_5\\
+    \xi_0 \widehat{\sigma}_4 + \xi_1 \widehat{\sigma}_5 + \xi_2 \widehat{\sigma}_2
+\end{pmatrix}
+\end{aligned}
+\end{equation}
+to obtain
+\begin{equation}
+R(\sigma) = \sqrt{\frac{\overline{\delta_0^2}+\overline{\delta_1^2}+\overline{\delta_2^2}}{\overline{\sigma}_0^2+\overline{\sigma}_1^2+\overline{\sigma}_2^2+2(\overline{\sigma}_3^2+\overline{\sigma}_4^2+\overline{\sigma}_5^2)}}
+\end{equation}
+where
+\begin{xalignat}{2}
+    \overline{\delta^2_i} &= \frac{1}{N}\sum_{\vec{n}}\delta^2_{i\vec{n}}, &
+    \overline{\sigma_i} &= \frac{1}{N}\sum_{\vec{n}}\sigma_{i\vec{n}}.
+\end{xalignat}
+Similarly, we find 
+\begin{equation}
+\widehat{R}(\widehat{\sigma}) = \sqrt{
+\frac{N(\overline{\widehat{\delta}_0^2}+\overline{\widehat{\delta}_1^2}+\overline{\widehat{\delta}_2^2})}{\left(\widehat{\sigma}_{0}^2+\widehat{\sigma}_{1}^2+\widehat{\sigma}_{2}^2+2(\widehat{\sigma}_{3}^2+\widehat{\sigma}_{4}^2+\widehat{\sigma}_{5}^2)\right)_{\vec{\xi}=0}}}
+\qquad\text{with\quad $\overline{\widehat{\delta}^2_i} = \frac{1}{N}\sum_{\vec{\xi}}|\widehat{\delta}_{i\vec{\xi}}|^2$}.
+\end{equation}
 \subsection{Anderson acceleration}
 The Lippmann-Schwinger algorithm with Anderson acceleration \cite{wicht2021anderson} is shown in \cref{alg:lippmann_schwinger_anderson}. It requires additional storage of $2\times(d+1)$ tensors for the state $\varepsilon^{(s)}$ and residuals $r^{(s)}$, as well as a $(d+1)\times (d+1)$ matrix and vectors $u,v\in\mathbb{R}^{d+1}$.
 \begin{algorithm}
