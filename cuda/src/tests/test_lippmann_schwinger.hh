@@ -85,4 +85,30 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
 
+/** @brief Check whether solver converges in zero iterations for homogeneous materials
+ */
+TEST_F(LippmannSchwingerTest, TestHomogeneousMaterial)
+{
+  int ncells = grid_spec.number_of_cells();
+  float *mu = nullptr;
+  float *lambda = nullptr;
+  float *epsilon = nullptr;
+  float *sigma = nullptr;
+  float epsilon_bar[6] = {1.0, 0.4, 0.3, 0.1, -0.4, 0.7};
+  CUDA_CHECK(cudaMallocHost(&mu, ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&lambda, ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&epsilon, 6 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
+  std::fill(mu, mu + ncells, 1.2);
+  std::fill(lambda, lambda + ncells, 1.2);
+
+  LippmannSchwingerSolver solver(grid_spec);
+  int iter = solver.apply(lambda, mu, epsilon_bar, epsilon, sigma, 1.E-4, 32);
+  CUDA_CHECK(cudaFreeHost(mu));
+  CUDA_CHECK(cudaFreeHost(lambda));
+  CUDA_CHECK(cudaFreeHost(epsilon));
+  CUDA_CHECK(cudaFreeHost(sigma));
+  EXPECT_EQ(iter, 0);
+}
+
 #endif // TEST_LIPPMANN_SCHWINGER_HH
