@@ -104,7 +104,7 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_
   // Compute norm of zero mode
 
   float nrm_sigma = tensor_norm(sigma_0, 1);
-  return nrm_div_sigma / nrm2_sigma;
+  return nrm_div_sigma / nrm_sigma;
 }
 
 /* Constructor */
