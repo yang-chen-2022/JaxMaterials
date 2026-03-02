@@ -37,9 +37,9 @@ float tensor_norm(float *tau, const int ncells) {
   float nrm2 = 0;
   for (int ell = 0; ell < ncells; ++ell) {
     for (int alpha = 0; alpha < 3; ++alpha)
-      nrm2 += tau[ell] * tau[ell];
+      nrm2 += tau[alpha * ncells + ell] * tau[alpha * ncells + ell];
     for (int alpha = 3; alpha < 6; ++alpha)
-      nrm2 += 2 * tau[ell] * tau[ell];
+      nrm2 += 2 * tau[alpha * ncells + ell] * tau[alpha * ncells + ell];
   }
   return sqrt(nrm2);
 }
@@ -49,9 +49,11 @@ float tensor_norm(cufftComplex *tau, const int ncells) {
   float nrm2 = 0;
   for (int ell = 0; ell < ncells; ++ell) {
     for (int alpha = 0; alpha < 3; ++alpha)
-      nrm2 += tau[ell].x * tau[ell].x + tau[ell].y * tau[ell].y;
+      nrm2 += tau[alpha * ncells + ell].x * tau[alpha * ncells + ell].x +
+              tau[alpha * ncells + ell].y * tau[alpha * ncells + ell].y;
     for (int alpha = 3; alpha < 6; ++alpha)
-      nrm2 += 2 * (tau[ell].x * tau[ell].x + tau[ell].y * tau[ell].y);
+      nrm2 += 2 * (tau[alpha * ncells + ell].x * tau[alpha * ncells + ell].x +
+                   tau[alpha * ncells + ell].y * tau[alpha * ncells + ell].y);
   }
   return sqrt(nrm2);
 }
