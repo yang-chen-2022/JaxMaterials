@@ -55,9 +55,10 @@ int main()
   initialize_lame_parameters(lambda, mu, grid_spec);
   CUDA_CHECK(cudaMallocHost(&epsilon, 6 * ncells * sizeof(float)));
   CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
-  const float tolerance = 1.E-6;
+  const float rtol = 1.E-6;
+  const float atol = 1.E-4;
   const int maxiter = 32;
-  int niter = lippmann_schwinger_solve(lambda, mu, epsilon_bar, epsilon, sigma, cells, extents, tolerance, maxiter);
+  int niter = lippmann_schwinger_solve(lambda, mu, epsilon_bar, epsilon, sigma, cells, extents, rtol, atol, maxiter);
 
   CUDA_CHECK(cudaFreeHost(lambda));
   CUDA_CHECK(cudaFreeHost(mu));

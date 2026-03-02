@@ -49,12 +49,13 @@ public:
      * @param[in] epsilon_bar average value of epsilon (host array, size 6)
      * @param[out] epsilon Resulting strain (host array, size 6*ncells)
      * @param[out] sigma Resulting stress (host array, size 6*ncells)
-     * @param[in] tolerance tolerance on normalised divergence
+     * @param[in] rtol relative tolerance on normalised divergence
+     * @param[in] atol absolute tolerance on normalised divergence
      * @param[in] maxiter maximum number of iterations
      */
     int apply(float *lambda, float *mu, float *epsilon_bar,
               float *epsilon, float *sigma,
-              float tolerance, int maxiter);
+              float rtol = 1.E-4, float atol = 1.E-7, int maxiter = 100);
 
     /** @brief Compute normalised divergence for stopping criterion in Fourier space
      *
@@ -132,7 +133,8 @@ protected:
  * @param[out] sigma Resulting stress (host array, size 6*ncells)
  * @param[in] cells Number of cells (nx,ny,nz)
  * @param[in] extents Size of domain in each direction (Lx,Ly,Lz)
- * @param[in] tolerance tolerance on normalised divergence
+ * @param[in] rtol relative tolerance on normalised divergence
+ * @param[in] atol absolute tolerance on normalised divergence
  * @param[in] maxiter maximum number of iterations
  *
  * Returns the actual number of iterations
@@ -143,7 +145,7 @@ extern "C"
                                  float *epsilon, float *sigma,
                                  int *cells,
                                  float *extents,
-                                 float tolerance, int maxiter);
+                                 float rtol, float atol, int maxiter);
 }
 
 #endif // LIPPMANN_SCHWINGER_HH

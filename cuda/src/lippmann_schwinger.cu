@@ -154,7 +154,7 @@ LippmannSchwingerSolver::~LippmannSchwingerSolver()
 /* apply solver */
 int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
                                    float *epsilon, float *sigma,
-                                   float tolerance, int maxiter)
+                                   float rtol, float atol, int maxiter)
 {
   int ncells = grid_spec.number_of_cells();
   // Average values of lambda and mu
@@ -170,11 +170,12 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
   CUDA_CHECK(cudaDeviceSynchronize());
   // main Lippmann-Schwinger loop
   float rel_div_norm = 0;
+  float rel_div_norm0;
   int iter;
   if (verbose == 2)
   {
     printf("==== Lippmann Schwinger solver ====\n");
-    printf("  iteration    rel. residual\n");
+    printf("  iteration           ||r||   ||r||/||r_0||\n");
   }
   for (iter = 0; iter < maxiter; ++iter)
   {
@@ -187,9 +188,11 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
     CUDA_CHECK(cudaDeviceSynchronize());
     /* ==== STEP 3 ==== Check convergence */
     rel_div_norm = relative_divergence_norm(dev_sigma_hat);
+    if (iter == 0)
+      rel_div_norm0 = rel_div_norm;
     if (verbose > 1)
-      printf("     %4d          %8.4e\n", iter, rel_div_norm);
-    if (rel_div_norm < tolerance)
+      printf("     %4d          %8.4e  %8.4e\n", iter, rel_div_norm, rel_div_norm / rel_div_norm0);
+    if (rel_div_norm < max(rtol * rel_div_norm0, atol))
       break;
     /* ==== STEP 4 ==== Solve in Fourier space: hat(r)_{kl} = -Gamma^{0}_{klij} hat(sigma)_{ij} */
     fourier_solve_device(dev_sigma_hat, dev_residual, dev_xi_zero, lambda_0, mu_0, grid_spec);
@@ -204,14 +207,14 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
   if (verbose > 0)
   {
     if (verbose == 1)
-      printf("  Lippmann Schwinger solver ");
+      printf("  LS ");
     else
       printf("  ");
     if (iter < maxiter)
       printf("converged");
     else
       printf("failed to converge");
-    printf(" after %4d its, rel. res. = %8.4e\n", iter, rel_div_norm);
+    printf(" after %4d its, ||r|| = %6.3e  ||r||/||r_0|| = %6.3e\n", iter, rel_div_norm, rel_div_norm / rel_div_norm0);
   }
   // Copy solution back to host
   CUDA_CHECK(cudaMemcpy(epsilon, dev_epsilon, 6 * ncells * sizeof(float), cudaMemcpyDeviceToHost));
@@ -226,7 +229,7 @@ extern "C"
                                float *epsilon, float *sigma,
                                int *cells,
                                float *extents,
-                               float tolerance, int maxiter)
+                               float rtol, float atol, int maxiter)
   {
     GridSpec grid_spec;
     grid_spec.nx = cells[0];
@@ -238,7 +241,7 @@ extern "C"
     LippmannSchwingerSolver solver(grid_spec);
     int iter = solver.apply(lambda, mu, epsilon_bar,
                             epsilon, sigma,
-                            tolerance, maxiter);
+                            rtol, atol, maxiter);
     return iter;
   }
 }

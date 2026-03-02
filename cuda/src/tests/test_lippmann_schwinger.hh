@@ -103,12 +103,62 @@ TEST_F(LippmannSchwingerTest, TestHomogeneousMaterial)
   std::fill(lambda, lambda + ncells, 1.2);
 
   LippmannSchwingerSolver solver(grid_spec);
-  int iter = solver.apply(lambda, mu, epsilon_bar, epsilon, sigma, 1.E-4, 32);
+  int iter = solver.apply(lambda, mu, epsilon_bar, epsilon, sigma);
   CUDA_CHECK(cudaFreeHost(mu));
   CUDA_CHECK(cudaFreeHost(lambda));
   CUDA_CHECK(cudaFreeHost(epsilon));
   CUDA_CHECK(cudaFreeHost(sigma));
   EXPECT_EQ(iter, 0);
+}
+
+/** @brief Check whether solver converges
+ */
+TEST_F(LippmannSchwingerTest, TestConvergence)
+{
+  int ncells = grid_spec.number_of_cells();
+  float *mu = nullptr;
+  float *lambda = nullptr;
+  float *epsilon = nullptr;
+  float *sigma = nullptr;
+  float *div_sigma = nullptr;
+  float epsilon_bar[6] = {1.0, 0.4, 0.3, 0.1, -0.4, 0.7};
+  CUDA_CHECK(cudaMallocHost(&mu, ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&lambda, ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&epsilon, 6 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&div_sigma, 3 * ncells * sizeof(float)));
+
+  std::default_random_engine rng;
+  std::uniform_real_distribution<float> distribution(0.8, 0.9);
+  std::generate(mu, mu + ncells, [&]()
+                { return distribution(rng); });
+  std::generate(lambda, lambda + ncells, [&]()
+                { return distribution(rng); });
+
+  LippmannSchwingerSolver solver(grid_spec);
+  int iter = solver.apply(lambda, mu, epsilon_bar, epsilon, sigma, 1.E-5, 1.E-4);
+
+  // normalised divergence
+  backward_divergence_host(sigma, div_sigma, grid_spec);
+  float div_sigma_nrm = vector_norm(div_sigma, ncells);
+  float sigma_avg[6];
+  for (int alpha = 0; alpha < 6; ++alpha)
+  {
+    sigma_avg[alpha] = 0;
+    for (int j = 0; j < ncells; ++j)
+      sigma_avg[alpha] += sigma[alpha * ncells + j];
+    sigma_avg[alpha] /= ncells;
+  }
+  float sigma_avg_nrm = tensor_norm(sigma_avg, 1);
+
+  CUDA_CHECK(cudaFreeHost(mu));
+  CUDA_CHECK(cudaFreeHost(lambda));
+  CUDA_CHECK(cudaFreeHost(epsilon));
+  CUDA_CHECK(cudaFreeHost(sigma));
+  CUDA_CHECK(cudaFreeHost(div_sigma));
+  // Check that number of iterations is small
+  EXPECT_LT(iter, 10);
+  EXPECT_LT(div_sigma_nrm / sigma_avg_nrm, 1.E-2);
 }
 
 #endif // TEST_LIPPMANN_SCHWINGER_HH
