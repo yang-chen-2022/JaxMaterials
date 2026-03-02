@@ -1,7 +1,7 @@
 
 #include "common.hh"
 #include "tests/test_derivatives.hh"
-#include "tests/test_fourier_solve.hh"
+#include "tests/test_fourier.hh"
 #include <gtest/gtest.h>
 
 /* Main program */

@@ -1,5 +1,5 @@
-#ifndef TEST_FOURIER_SOLVE_HH
-#define TEST_FOURIER_SOLVE_HH TEST_FOURIER_SOLVE_HH
+#ifndef TEST_FOURIER_HH
+#define TEST_FOURIER_HH TEST_FOURIER_HH
 #include <random>
 #include "cufft.h"
 #include <algorithm>
@@ -290,4 +290,4 @@ TEST_F(FourierSolveTest, TestDivSigma)
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
 
-#endif // TEST_FOURIER_SOLVE_HH
+#endif // TEST_FOURIER_HH
