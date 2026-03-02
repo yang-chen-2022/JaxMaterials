@@ -5,7 +5,6 @@ add_subdirectory(tests)
 add_library(lippmannschwinger SHARED)
 
 target_sources(lippmannschwinger
-    
     PRIVATE        
         common.cc
         derivatives.cu        
@@ -14,7 +13,8 @@ target_sources(lippmannschwinger
         lippmann_schwinger.cu
         
     PUBLIC
-        FILE_SET HEADERS
+        FILE_SET headers
+        TYPE HEADERS
         FILES            
             common.hh
             derivatives.hh                        
