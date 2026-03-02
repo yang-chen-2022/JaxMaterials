@@ -33,25 +33,25 @@ float vector_norm(cufftComplex *u, const int ncells) {
 }
 
 /* Compute norm of tensor field */
-float tensor_norm(float *u, const int ncells) {
+float tensor_norm(float *tau, const int ncells) {
   float nrm2 = 0;
   for (int ell = 0; ell < ncells; ++ell) {
     for (int alpha = 0; alpha < 3; ++alpha)
-      nrm2 += u[ell] * u[ell];
+      nrm2 += tau[ell] * tau[ell];
     for (int alpha = 3; alpha < 6; ++alpha)
-      nrm2 += 2 * u[ell] * u[ell];
+      nrm2 += 2 * tau[ell] * tau[ell];
   }
   return sqrt(nrm2);
 }
 
 /* Compute norm of tensor field */
-float tensor_norm(cufftComplex *u, const int ncells) {
+float tensor_norm(cufftComplex *tau, const int ncells) {
   float nrm2 = 0;
   for (int ell = 0; ell < ncells; ++ell) {
     for (int alpha = 0; alpha < 3; ++alpha)
-      nrm2 += u[ell].x * u[ell].x + u[ell].y * u[ell].y;
+      nrm2 += tau[ell].x * tau[ell].x + tau[ell].y * tau[ell].y;
     for (int alpha = 3; alpha < 6; ++alpha)
-      nrm2 += 2 * (u[ell].x * u[ell].x + u[ell].y * u[ell].y);
+      nrm2 += 2 * (tau[ell].x * tau[ell].x + tau[ell].y * tau[ell].y);
   }
   return sqrt(nrm2);
 }

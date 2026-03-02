@@ -93,7 +93,6 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_
   // Scale by number of cells
   nrm_div_sigma /= sqrt(ncells);
   // STEP 2: compute ||<sigma>||^2
-  float nrm2_sigma = 0;
   // Extract zero mode, which is identical to the sum of sigma over the domain, i.e. ncells * <sigma>
   CUDA_CHECK(cudaMemcpy2D(sigma_0, sizeof(cufftComplex), dev_sigma_hat, ncells * sizeof(cufftComplex), sizeof(cufftComplex), 6, cudaMemcpyDeviceToHost));
   // Normalise by number of cells
@@ -103,9 +102,9 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_
     sigma_0[alpha].y /= ncells;
   }
   // Compute norm of zero mode
-  for (int alpha = 0; alpha < 6; ++alpha)
-    nrm2_sigma += (1 + (2 < alpha)) * (sigma_0[alpha].x * sigma_0[alpha].x + sigma_0[alpha].y * sigma_0[alpha].y);
-  return nrm_div_sigma / sqrt(nrm2_sigma);
+
+  float nrm_sigma = tensor_norm(sigma_0, 1);
+  return nrm_div_sigma / nrm2_sigma;
 }
 
 /* Constructor */
