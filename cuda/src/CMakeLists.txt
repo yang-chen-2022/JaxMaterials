@@ -59,8 +59,8 @@ if(GTest_FOUND)
         PRIVATE
             CUDA::cufft
             CUDA::cublas
-            GTest::gtest_main         
             lippmannschwinger
+            GTest::gtest_main                     
     )
     set_target_properties(test PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ../bin)

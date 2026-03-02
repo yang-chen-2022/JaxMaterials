@@ -7,11 +7,11 @@
 #include "fourier.hh"
 #include <gtest/gtest.h>
 
-class FourierSolveTest : public ::testing::Test
+class FourierTest : public ::testing::Test
 {
 public:
   /** @Create a new instance */
-  FourierSolveTest() {}
+  FourierTest() {}
 
 protected:
   /** @brief initialise tests */
@@ -96,7 +96,7 @@ protected:
 
 /** @brief Check whether xi-zero is constructed consistently on device and host
  */
-TEST_F(FourierSolveTest, TestXiZero)
+TEST_F(FourierTest, TestXiZero)
 {
   float tolerance = 1.E-6;
   // halo size
@@ -117,6 +117,62 @@ TEST_F(FourierSolveTest, TestXiZero)
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
 
+/* Check whether divergence computation is consistent in Fourier- and real space
+ */
+TEST_F(FourierTest, TestFourierDivergence)
+{
+  int ncells = grid_spec.number_of_cells();
+  float *dev_xi = nullptr;
+  float *div_epsilon = nullptr;
+  cufftComplex *dev_div_epsilon_hat = nullptr;
+  cufftComplex *div_epsilon_hat = nullptr;
+  CUDA_CHECK(cudaMalloc(&dev_xi, 3 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_div_epsilon_hat, 3 * ncells * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMallocHost(&div_epsilon, 3 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&div_epsilon_hat, 3 * ncells * sizeof(cufftComplex)));
+
+  // Initialize epsilon with random numbers
+  std::generate(epsilon, epsilon + 6 * ncells, [&]()
+                { return distribution(rng); });
+
+  // compute divergence of epsilon in real space
+  backward_divergence_host(epsilon, div_epsilon, grid_spec);
+
+  CUDA_CHECK(cudaMemset(dev_epsilon, 0, 6 * ncells * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMemcpy2D(dev_epsilon, 2 * sizeof(float), epsilon, sizeof(float), sizeof(float), 6 * ncells, cudaMemcpyHostToDevice));
+
+  // Fourier transform epsilon
+  cufftHandle plan;
+  int n[3] = {grid_spec.nz, grid_spec.ny, grid_spec.nx};
+  CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, ncells, n, 1, ncells, CUFFT_C2C, 6));
+  CUFFT_CHECK(cufftExecC2C(plan, dev_epsilon, dev_epsilon_hat, CUFFT_FORWARD));
+  CUDA_CHECK(cudaDeviceSynchronize());
+
+  // compute divergence of hat(epsilon) in Fourier space on device
+  initialize_xi(dev_xi, grid_spec);
+  divergence_fourier(dev_epsilon_hat, dev_div_epsilon_hat, dev_xi, grid_spec);
+  cudaDeviceSynchronize();
+  // Copy back to host
+  CUDA_CHECK(cudaMemcpy(div_epsilon_hat, dev_div_epsilon_hat, 3 * ncells * sizeof(cufftComplex), cudaMemcpyDeviceToHost));
+  float div_norm2_real = 0;
+  float div_fourier_norm2 = 0;
+  for (int ell = 0; ell < 3 * ncells; ++ell)
+  {
+    div_norm2_real += div_epsilon[ell] * div_epsilon[ell];
+    div_fourier_norm2 += div_epsilon_hat[ell].x * div_epsilon_hat[ell].x +
+                         div_epsilon_hat[ell].y * div_epsilon_hat[ell].y;
+  }
+  float norm_real = sqrt(div_norm2_real);
+  float norm_fourier = sqrt(div_fourier_norm2 / ncells);
+  float rel_diff = (norm_fourier - norm_real) / norm_real;
+  CUDA_CHECK(cudaFreeHost(div_epsilon));
+  CUDA_CHECK(cudaFree(dev_xi));
+  CUDA_CHECK(cudaFree(dev_div_epsilon_hat));
+  CUDA_CHECK(cudaFreeHost(div_epsilon_hat));
+  float tolerance = 1.E-4;
+  EXPECT_NEAR(rel_diff, 0.0, tolerance);
+}
+
 /* Check whether div(sigma^0) = 0 for homogeneous material in Fourier space
  *
  * Here sigma^0_{ij} = C^0_{ijkl} epsilon_{kl} + tau_{ij} is obtained by solving the
@@ -129,7 +185,7 @@ TEST_F(FourierSolveTest, TestXiZero)
  *
  * and given, random tau
  */
-TEST_F(FourierSolveTest, TestDivSigmaFourier)
+TEST_F(FourierTest, TestDivSigmaFourier)
 {
   int ncells = grid_spec.number_of_cells();
 
@@ -223,7 +279,7 @@ TEST_F(FourierSolveTest, TestDivSigmaFourier)
  * This test checks that div(sigma^0) = 0 in real space.
  *
  */
-TEST_F(FourierSolveTest, TestDivSigma)
+TEST_F(FourierTest, TestDivSigma)
 {
   int ncells = grid_spec.number_of_cells();
   // Initialize tau with random numbers
