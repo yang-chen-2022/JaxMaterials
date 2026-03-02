@@ -42,6 +42,8 @@ protected:
     // Initialise Fourier vectors
     initialize_xizero_host(xi_zero, grid_spec);
     initialize_xizero(dev_xi_zero, grid_spec);
+    int n[3] = {grid_spec.nz, grid_spec.ny, grid_spec.nx};
+    CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, ncells, n, 1, ncells, CUFFT_C2C, 6));
   }
   void TearDown() override
   {
@@ -92,6 +94,8 @@ protected:
   std::default_random_engine rng;
   /* normal distribution */
   std::normal_distribution<float> distribution;
+  /* cuFFT plan */
+  cufftHandle plan;
 };
 
 /** @brief Check whether xi-zero is constructed consistently on device and host
@@ -142,9 +146,6 @@ TEST_F(FourierTest, TestFourierDivergence)
   CUDA_CHECK(cudaMemcpy2D(dev_epsilon, 2 * sizeof(float), epsilon, sizeof(float), sizeof(float), 6 * ncells, cudaMemcpyHostToDevice));
 
   // Fourier transform epsilon
-  cufftHandle plan;
-  int n[3] = {grid_spec.nz, grid_spec.ny, grid_spec.nx};
-  CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, ncells, n, 1, ncells, CUFFT_C2C, 6));
   CUFFT_CHECK(cufftExecC2C(plan, dev_epsilon, dev_epsilon_hat, CUFFT_FORWARD));
   CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -196,9 +197,6 @@ TEST_F(FourierTest, TestDivSigmaFourier)
   CUDA_CHECK(cudaMemcpy2D(dev_tau, 2 * sizeof(float), tau, sizeof(float), sizeof(float), 6 * ncells, cudaMemcpyHostToDevice));
 
   // Fourier transform the real-valued tau
-  cufftHandle plan;
-  int n[3] = {grid_spec.nz, grid_spec.ny, grid_spec.nx};
-  CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, ncells, n, 1, ncells, CUFFT_C2C, 6));
   CUFFT_CHECK(cufftExecC2C(plan, dev_tau, dev_tau_hat, CUFFT_FORWARD));
   CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -289,9 +287,6 @@ TEST_F(FourierTest, TestDivSigma)
   CUDA_CHECK(cudaMemcpy2D(dev_tau, 2 * sizeof(float), tau, sizeof(float), sizeof(float), 6 * ncells, cudaMemcpyHostToDevice));
 
   // Fourier transform the real-valued tau
-  cufftHandle plan;
-  int n[3] = {grid_spec.nz, grid_spec.ny, grid_spec.nx};
-  CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, ncells, n, 1, ncells, CUFFT_C2C, 6));
   CUFFT_CHECK(cufftExecC2C(plan, dev_tau, dev_tau_hat, CUFFT_FORWARD));
   CUDA_CHECK(cudaDeviceSynchronize());
 
