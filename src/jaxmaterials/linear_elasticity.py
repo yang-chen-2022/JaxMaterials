@@ -292,11 +292,11 @@ def relative_divergence_fourier(sigma_hat, xi, grid_spec):
         ]
     )
     dsigma_nrm2 = jnp.sum(jnp.abs(dsigma_hat) ** 2) / N
-    sigma_hat_zero = jnp.real(sigma_hat[:, 0, 0, 0])
+    sigma_hat_zero = jnp.real(sigma_hat[:, 0, 0, 0]) / N
     sigma_hat_zero_nrm2 = jnp.sum(sigma_hat_zero[:3] ** 2) + 2 * jnp.sum(
         sigma_hat_zero[3:] ** 2
     )
-    return jnp.sqrt(N * dsigma_nrm2 / sigma_hat_zero_nrm2)
+    return jnp.sqrt(dsigma_nrm2 / sigma_hat_zero_nrm2)
 
 
 @jax.jit(static_argnames=["grid_spec", "tolerance", "depth"])
