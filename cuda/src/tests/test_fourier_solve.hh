@@ -23,8 +23,75 @@ protected:
     grid_spec.Lx = 1.1;
     grid_spec.Ly = 0.9;
     grid_spec.Lz = 0.7;
+    // random number generator
+    int ncells = grid_spec.number_of_cells();
+    // allocate memory
+    CUDA_CHECK(cudaMallocHost(&xi_zero, 3 * ncells * sizeof(float)));
+    CUDA_CHECK(cudaMallocHost(&tau, 6 * ncells * sizeof(float)));
+    CUDA_CHECK(cudaMallocHost(&tau_hat, 6 * ncells * sizeof(cufftComplex)));
+    CUDA_CHECK(cudaMallocHost(&epsilon_hat, 6 * ncells * sizeof(cufftComplex)));
+    CUDA_CHECK(cudaMallocHost(&epsilon, 6 * ncells * sizeof(float)));
+    CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
+    CUDA_CHECK(cudaMallocHost(&div_sigma, 6 * ncells * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&dev_xi_zero, 3 * ncells * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&dev_tau, 6 * ncells * sizeof(cufftComplex)));
+    CUDA_CHECK(cudaMalloc(&dev_tau_hat, 6 * ncells * sizeof(cufftComplex)));
+    CUDA_CHECK(cudaMalloc(&dev_epsilon_hat, 6 * ncells * sizeof(cufftComplex)));
+    CUDA_CHECK(cudaMalloc(&dev_epsilon, 6 * ncells * sizeof(cufftComplex)));
+
+    // Initialise Fourier vectors
+    initialize_xizero_host(xi_zero, grid_spec);
+    initialize_xizero(dev_xi_zero, grid_spec);
   }
+  void TearDown() override
+  {
+    // free memory
+    CUDA_CHECK(cudaFree(dev_xi_zero));
+    CUDA_CHECK(cudaFree(dev_tau_hat));
+    CUDA_CHECK(cudaFreeHost(tau_hat));
+    CUDA_CHECK(cudaFree(dev_tau));
+    CUDA_CHECK(cudaFree(dev_epsilon_hat));
+    CUDA_CHECK(cudaFree(dev_epsilon));
+    CUDA_CHECK(cudaFreeHost(xi_zero));
+    CUDA_CHECK(cudaFreeHost(tau));
+    CUDA_CHECK(cudaFreeHost(epsilon_hat));
+    CUDA_CHECK(cudaFreeHost(epsilon));
+    CUDA_CHECK(cudaFreeHost(sigma));
+    CUDA_CHECK(cudaFreeHost(div_sigma));
+  }
+  /* Grid specification */
   GridSpec grid_spec;
+  /* constant reference Lame parameters */
+  const float lambda_0 = 0.8;
+  const float mu_0 = 1.3;
+  /* Fourier vector on host */
+  float *xi_zero;
+  /* Fourier vector on device */
+  float *dev_xi_zero;
+  /* right hand side tau on host */
+  float *tau;
+  /* right hand side tau on host */
+  cufftComplex *dev_tau;
+  /* right hand side tau on device */
+  cufftComplex *dev_tau_hat;
+  /* Fourier-transform of tau */
+  cufftComplex *tau_hat;
+  /* Fourier transform of strain tensor on device */
+  cufftComplex *dev_epsilon_hat;
+  /* train tensor on device */
+  cufftComplex *dev_epsilon;
+  /* Fourier transform of strain tensor on host */
+  cufftComplex *epsilon_hat;
+  /* Strain tensor on host */
+  float *epsilon;
+  /* Stress tensor on host */
+  float *sigma;
+  /* Divergence of stress tensor on host */
+  float *div_sigma;
+  /* Random number generator */
+  std::default_random_engine rng;
+  /* normal distribution */
+  std::normal_distribution<float> distribution;
 };
 
 /** @brief Check whether xi-zero is constructed consistently on device and host
@@ -35,17 +102,9 @@ TEST_F(FourierSolveTest, TestXiZero)
   // halo size
   int ncells = grid_spec.number_of_cells();
   // allocate host memory
-  float *xi_zero = nullptr;
   float *xi_zero_ref = nullptr;
-  CUDA_CHECK(cudaMallocHost(&xi_zero, 3 * ncells * sizeof(float)));
   CUDA_CHECK(cudaMallocHost(&xi_zero_ref, 3 * ncells * sizeof(float)));
-
-  // allocate device memory
-  float *dev_xi_zero = nullptr;
-  CUDA_CHECK(cudaMalloc(&dev_xi_zero, 3 * ncells * sizeof(float)));
   initialize_xizero_host(xi_zero_ref, grid_spec);
-  initialize_xizero(dev_xi_zero, grid_spec);
-  CUDA_CHECK(cudaDeviceSynchronize());
 
   CUDA_CHECK(cudaMemcpy(xi_zero, dev_xi_zero, 3 * ncells * sizeof(float),
                         cudaMemcpyDeviceToHost));
@@ -53,9 +112,7 @@ TEST_F(FourierSolveTest, TestXiZero)
   float rel_diff = relative_difference(xi_zero, xi_zero_ref, 3 * ncells);
 
   // Free memory
-  CUDA_CHECK(cudaFreeHost(xi_zero));
   CUDA_CHECK(cudaFreeHost(xi_zero_ref));
-  CUDA_CHECK(cudaFree(dev_xi_zero));
 
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
@@ -74,34 +131,7 @@ TEST_F(FourierSolveTest, TestXiZero)
  */
 TEST_F(FourierSolveTest, TestDivSigmaFourier)
 {
-  // random number generator
-  std::default_random_engine rng(7812481);
-  std::normal_distribution<float> distribution(0, 1);
   int ncells = grid_spec.number_of_cells();
-  // Lame parameters
-  const float lambda_0 = 0.8;
-  const float mu_0 = 1.3;
-  // allocate memory
-  float *xi_zero = nullptr;
-  float *dev_xi_zero = nullptr;
-  float *tau = nullptr;
-  cufftComplex *dev_tau = nullptr;
-  cufftComplex *dev_tau_hat = nullptr;
-  cufftComplex *tau_hat = nullptr;
-  cufftComplex *dev_epsilon_hat = nullptr;
-  cufftComplex *epsilon_hat = nullptr;
-  CUDA_CHECK(cudaMallocHost(&xi_zero, 3 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&tau, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&tau_hat, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMallocHost(&epsilon_hat, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_xi_zero, 3 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&dev_tau, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_tau_hat, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_epsilon_hat, 6 * ncells * sizeof(cufftComplex)));
-
-  // Initialise Fourier vectors
-  initialize_xizero_host(xi_zero, grid_spec);
-  initialize_xizero(dev_xi_zero, grid_spec);
 
   // Initialize tau with random numbers
   std::generate(tau, tau + 6 * ncells, [&]()
@@ -178,15 +208,6 @@ TEST_F(FourierSolveTest, TestDivSigmaFourier)
     }
   }
   float rel_diff = sqrt(div_nrm2 / sigma_nrm2);
-  // free memory
-  CUDA_CHECK(cudaFree(dev_xi_zero));
-  CUDA_CHECK(cudaFree(dev_tau_hat));
-  CUDA_CHECK(cudaFreeHost(tau_hat));
-  CUDA_CHECK(cudaFree(dev_tau));
-  CUDA_CHECK(cudaFree(dev_epsilon_hat));
-  CUDA_CHECK(cudaFreeHost(xi_zero));
-  CUDA_CHECK(cudaFreeHost(tau));
-  CUDA_CHECK(cudaFreeHost(epsilon_hat));
   float tolerance = 1.E-6;
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
@@ -201,40 +222,10 @@ TEST_F(FourierSolveTest, TestDivSigmaFourier)
  *
  * This test checks that div(sigma^0) = 0 in real space.
  *
- * and given, random tau
  */
 TEST_F(FourierSolveTest, TestDivSigma)
 {
-  // random number generator
-  std::default_random_engine rng(7812481);
-  std::normal_distribution<float> distribution(0, 1);
   int ncells = grid_spec.number_of_cells();
-  // Lame parameters
-  const float lambda_0 = 0.8;
-  const float mu_0 = 1.3;
-  // allocate memory
-  float *dev_xi_zero = nullptr;
-  float *tau = nullptr;
-  cufftComplex *dev_tau = nullptr;
-  cufftComplex *dev_tau_hat = nullptr;
-  cufftComplex *dev_epsilon_hat = nullptr;
-  cufftComplex *dev_epsilon = nullptr;
-  float *epsilon = nullptr;
-  float *sigma = nullptr;
-  float *div_sigma = nullptr;
-  CUDA_CHECK(cudaMalloc(&dev_xi_zero, 3 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&tau, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&dev_tau, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_tau_hat, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_epsilon, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_epsilon_hat, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMallocHost(&epsilon, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&div_sigma, 3 * ncells * sizeof(float)));
-
-  // Initialise Fourier vectors
-  initialize_xizero(dev_xi_zero, grid_spec);
-
   // Initialize tau with random numbers
   std::generate(tau, tau + 6 * ncells, [&]()
                 { return distribution(rng); });
@@ -295,16 +286,6 @@ TEST_F(FourierSolveTest, TestDivSigma)
     }
   }
   float rel_diff = sqrt(div_nrm2 / sigma_nrm2);
-  // free memory
-  CUDA_CHECK(cudaFree(dev_xi_zero));
-  CUDA_CHECK(cudaFreeHost(tau));
-  CUDA_CHECK(cudaFree(dev_tau));
-  CUDA_CHECK(cudaFree(dev_tau_hat));
-  CUDA_CHECK(cudaFree(dev_epsilon_hat));
-  CUDA_CHECK(cudaFree(dev_epsilon));
-  CUDA_CHECK(cudaFreeHost(epsilon));
-  CUDA_CHECK(cudaFreeHost(sigma));
-  CUDA_CHECK(cudaFreeHost(div_sigma));
   float tolerance = 5.E-5;
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
