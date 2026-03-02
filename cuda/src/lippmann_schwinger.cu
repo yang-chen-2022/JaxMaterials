@@ -159,7 +159,7 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
   int ncells = grid_spec.number_of_cells();
   // Average values of lambda and mu
   float lambda_0 = 0.5 * (*std::max_element(lambda, lambda + ncells) + *std::min_element(lambda, lambda + ncells));
-  float mu_0 = 0.5 * (*std::min_element(lambda, lambda + ncells) + *std::min_element(mu, mu + ncells));
+  float mu_0 = 0.5 * (*std::max_element(mu, mu + ncells) + *std::min_element(mu, mu + ncells));
 
   // copy Lame parameters to device
   CUDA_CHECK(cudaMemcpy(dev_lambda, lambda, ncells * sizeof(float), cudaMemcpyHostToDevice));
