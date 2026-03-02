@@ -16,8 +16,9 @@ public:
      * Initialise all state variables and allocate required memory
      *
      * @param[in] grid_spec specification of computational grid
+     * @param[in] verbose verbosity level: 0 = no output, 1 = print summary, >1 = print at every iteration
      */
-    LippmannSchwingerSolver(const GridSpec grid_spec);
+    LippmannSchwingerSolver(const GridSpec grid_spec, const int verbose = 0);
 
     /** @brief Destructor
      *
@@ -90,6 +91,8 @@ protected:
     /* Class variables */
     /** @brief specification of computational grid */
     const GridSpec grid_spec;
+    /** @brief verbosity level */
+    const int verbose;
     /** @brief Fourier vectors */
     float *dev_xi;
     /** @brief normalised Fourier vectors */

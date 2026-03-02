@@ -108,7 +108,7 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_
 }
 
 /* Constructor */
-LippmannSchwingerSolver::LippmannSchwingerSolver(const GridSpec grid_spec) : grid_spec(grid_spec)
+LippmannSchwingerSolver::LippmannSchwingerSolver(const GridSpec grid_spec, const int verbose) : grid_spec(grid_spec), verbose(verbose)
 {
   int ncells = grid_spec.number_of_cells();
   // Initialise cuBLAS
@@ -171,9 +171,13 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
   // main Lippmann-Schwinger loop
   float rel_div_norm = 0;
   int iter;
+  if (verbose == 2)
+  {
+    printf("==== Lippmann Schwinger solver ====\n");
+    printf("  iteration    rel. residual\n");
+  }
   for (iter = 0; iter < maxiter; ++iter)
   {
-    printf("iteration %4d\n", iter);
     /* ==== STEP 1 ==== Compute stress: sigma_{ij} = C_{ijkl} epsilon_{kl} */
     compute_stress(dev_epsilon, dev_sigma, dev_lambda, dev_mu);
     /* ==== STEP 2 ==== Fourier transform:  hat(sigma) = FFT(sigma)*/
@@ -183,7 +187,8 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
     CUDA_CHECK(cudaDeviceSynchronize());
     /* ==== STEP 3 ==== Check convergence */
     rel_div_norm = relative_divergence_norm(dev_sigma_hat);
-    printf("rel divergence norm = %e\n", rel_div_norm);
+    if (verbose > 1)
+      printf("     %4d          %8.4e\n", iter, rel_div_norm);
     if (rel_div_norm < tolerance)
       break;
     /* ==== STEP 4 ==== Solve in Fourier space: hat(r)_{kl} = -Gamma^{0}_{klij} hat(sigma)_{ij} */
@@ -195,6 +200,18 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
     /* ==== STEP 6 ==== Update solution: epsilon -> epsilon + r*/
     increment_solution(dev_epsilon, dev_residual);
     CUDA_CHECK(cudaDeviceSynchronize());
+  }
+  if (verbose > 0)
+  {
+    if (verbose == 1)
+      printf("  Lippmann Schwinger solver ");
+    else
+      printf("  ");
+    if (iter < maxiter)
+      printf("converged");
+    else
+      printf("failed to converge");
+    printf(" after %4d its, rel. res. = %8.4e\n", iter, rel_div_norm);
   }
   // Copy solution back to host
   CUDA_CHECK(cudaMemcpy(epsilon, dev_epsilon, 6 * ncells * sizeof(float), cudaMemcpyDeviceToHost));
