@@ -4,6 +4,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include "cufft.h"
 
 // Block size used for 3d kernel launches
 #define BLOCKSIZE_X 8
@@ -19,37 +20,43 @@
 // Convert 3d index to linear index
 #define IDX(Nx, Ny, Nz, i, j, k) ((i) + (Nx) * ((j) + (Ny) * (k)))
 // Convert (1+3)d index to linear index
-#define FIDX(Nx, Ny, Nz, mu, i, j, k)                                          \
+#define FIDX(Nx, Ny, Nz, mu, i, j, k) \
   ((i) + (Nx) * ((j) + (Ny) * ((k) + (Nz) * (mu))))
 
 // Error checking, as defined in CUDA Programming guide, Section 2.1.7
-#define CUDA_CHECK(expr_to_check)                                              \
-  do {                                                                         \
-    cudaError_t result = expr_to_check;                                        \
-    if (result != cudaSuccess) {                                               \
-      fprintf(stderr, "CUDA Runtime Error: %s:%i:%d = %s\n", __FILE__,         \
-              __LINE__, result, cudaGetErrorString(result));                   \
-    }                                                                          \
+#define CUDA_CHECK(expr_to_check)                                      \
+  do                                                                   \
+  {                                                                    \
+    cudaError_t result = expr_to_check;                                \
+    if (result != cudaSuccess)                                         \
+    {                                                                  \
+      fprintf(stderr, "CUDA Runtime Error: %s:%i:%d = %s\n", __FILE__, \
+              __LINE__, result, cudaGetErrorString(result));           \
+    }                                                                  \
   } while (0)
 
 // Corresponding cuFFT error checking
-#define CUFFT_CHECK(expr_to_check)                                             \
-  do {                                                                         \
-    cufftResult_t result = expr_to_check;                                      \
-    if (result != CUFFT_SUCCESS) {                                             \
-      fprintf(stderr, "cuFFT Runtime Error: %s:%i:%d\n", __FILE__, __LINE__,   \
-              result);                                                         \
-    }                                                                          \
+#define CUFFT_CHECK(expr_to_check)                                           \
+  do                                                                         \
+  {                                                                          \
+    cufftResult_t result = expr_to_check;                                    \
+    if (result != CUFFT_SUCCESS)                                             \
+    {                                                                        \
+      fprintf(stderr, "cuFFT Runtime Error: %s:%i:%d\n", __FILE__, __LINE__, \
+              result);                                                       \
+    }                                                                        \
   } while (0)
 
 // Corresponding cuBLAS error checking
-#define CUBLAS_CHECK(expr_to_check)                                            \
-  do {                                                                         \
-    cublasStatus_t stat = expr_to_check;                                       \
-    if (stat != CUBLAS_STATUS_SUCCESS) {                                       \
-      fprintf(stderr, "cuBLAS Runtime Error: %s:%i:%d\n", __FILE__, __LINE__,  \
-              stat);                                                           \
-    }                                                                          \
+#define CUBLAS_CHECK(expr_to_check)                                           \
+  do                                                                          \
+  {                                                                           \
+    cublasStatus_t stat = expr_to_check;                                      \
+    if (stat != CUBLAS_STATUS_SUCCESS)                                        \
+    {                                                                         \
+      fprintf(stderr, "cuBLAS Runtime Error: %s:%i:%d\n", __FILE__, __LINE__, \
+              stat);                                                          \
+    }                                                                         \
   } while (0)
 
 /** @brief Specification of computational grid
@@ -57,7 +64,8 @@
  * Describes grid of the domain Lx x Ly x Lz with nx, ny, nz grid cells
  * (or voxels) in the different coordinate directions
  */
-struct GridSpec {
+struct GridSpec
+{
   int nx;   // Number of grid cells in x-direction
   int ny;   // Number of grid cells in y-direction
   int nz;   // Number of grid cells in z-direction
@@ -78,5 +86,13 @@ struct GridSpec {
  * @param[in] ndof number of unknowns
  */
 float relative_difference(float *u, float *u_ref, const int ndof);
+
+/* @brief Compute norm of vector field */
+float vector_norm(float *u, const int ncells);
+float vector_norm(cufftComplex *u, const int ncells);
+
+/* @brief Compute norm of tensor field */
+float tensor_norm(float *u, const int ncells);
+float tensor_norm(cufftComplex *u, const int ncells);
 
 #endif // COMMON_HH

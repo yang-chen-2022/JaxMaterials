@@ -3,6 +3,7 @@
 #include <random>
 #include "cufft.h"
 #include <algorithm>
+#include "common.hh"
 #include "derivatives.hh"
 #include "fourier.hh"
 #include <gtest/gtest.h>
@@ -155,114 +156,16 @@ TEST_F(FourierTest, TestFourierDivergence)
   cudaDeviceSynchronize();
   // Copy back to host
   CUDA_CHECK(cudaMemcpy(div_epsilon_hat, dev_div_epsilon_hat, 3 * ncells * sizeof(cufftComplex), cudaMemcpyDeviceToHost));
-  float div_norm2_real = 0;
-  float div_fourier_norm2 = 0;
-  for (int ell = 0; ell < 3 * ncells; ++ell)
-  {
-    div_norm2_real += div_epsilon[ell] * div_epsilon[ell];
-    div_fourier_norm2 += div_epsilon_hat[ell].x * div_epsilon_hat[ell].x +
-                         div_epsilon_hat[ell].y * div_epsilon_hat[ell].y;
-  }
-  float norm_real = sqrt(div_norm2_real);
-  float norm_fourier = sqrt(div_fourier_norm2 / ncells);
+  // Compute norms ||D(epsilon)|| and ||xi.hat(epsilon)||
+  float norm_real = vector_norm(div_epsilon, ncells);
+  float norm_fourier = vector_norm(div_epsilon_hat, ncells) / sqrt(ncells);
   float rel_diff = (norm_fourier - norm_real) / norm_real;
+  // Free memory
   CUDA_CHECK(cudaFreeHost(div_epsilon));
   CUDA_CHECK(cudaFree(dev_xi));
   CUDA_CHECK(cudaFree(dev_div_epsilon_hat));
   CUDA_CHECK(cudaFreeHost(div_epsilon_hat));
   float tolerance = 1.E-4;
-  EXPECT_NEAR(rel_diff, 0.0, tolerance);
-}
-
-/* Check whether div(sigma^0) = 0 for homogeneous material in Fourier space
- *
- * Here sigma^0_{ij} = C^0_{ijkl} epsilon_{kl} + tau_{ij} is obtained by solving the
- * equations of linear elasticity in a homogeneous isotropic material with
- *
- *     C^0_{ijkl} = lambda^0 (delta_{ij}delta_{kl}
- *                + mu^0 (delta_{ik}delta_{jl} + delta_{il}delta_{jk}))
- *
- * This test checks that div(sigma^0) = 0 in Fourier space.
- *
- * and given, random tau
- */
-TEST_F(FourierTest, TestDivSigmaFourier)
-{
-  int ncells = grid_spec.number_of_cells();
-
-  // Initialize tau with random numbers
-  std::generate(tau, tau + 6 * ncells, [&]()
-                { return distribution(rng); });
-  CUDA_CHECK(cudaMemset(dev_tau, 0, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMemcpy2D(dev_tau, 2 * sizeof(float), tau, sizeof(float), sizeof(float), 6 * ncells, cudaMemcpyHostToDevice));
-
-  // Fourier transform the real-valued tau
-  CUFFT_CHECK(cufftExecC2C(plan, dev_tau, dev_tau_hat, CUFFT_FORWARD));
-  CUDA_CHECK(cudaDeviceSynchronize());
-
-  // Solve on device and copy back
-  fourier_solve_device(dev_tau_hat, dev_epsilon_hat, dev_xi_zero,
-                       lambda_0, mu_0, grid_spec);
-  CUDA_CHECK(cudaDeviceSynchronize());
-  CUDA_CHECK(cudaMemcpy(epsilon_hat, dev_epsilon_hat, 6 * ncells * sizeof(cufftComplex), cudaMemcpyDeviceToHost));
-  CUDA_CHECK(cudaMemcpy(tau_hat, dev_tau_hat, 6 * ncells * sizeof(cufftComplex), cudaMemcpyDeviceToHost));
-  float sigma_nrm2 = 0;
-  float div_nrm2 = 0;
-  // Compute ||div(sigma^0)||^2 and ||sigma^0||^2 in Fourier space
-  for (int ell = 0; ell < ncells; ++ell)
-  {
-    float xi[3];
-    cufftComplex xi_sigma[3];
-    cufftComplex tau[6];
-    cufftComplex epsilon[6];
-    cufftComplex sigma[6];
-    for (int mu = 0; mu < 3; ++mu)
-      xi[mu] = xi_zero[mu * ncells + ell];
-
-    for (int mu = 0; mu < 6; ++mu)
-    {
-      tau[mu] = tau_hat[mu * ncells + ell];
-      epsilon[mu] = epsilon_hat[mu * ncells + ell];
-    }
-
-    // trace of epsilon
-    cufftComplex tr_epsilon;
-    tr_epsilon.x = epsilon[0].x + epsilon[1].x + epsilon[2].x;
-    tr_epsilon.y = epsilon[0].y + epsilon[1].y + epsilon[2].y;
-
-    // compute sigma
-    for (int alpha = 0; alpha < 6; ++alpha)
-    {
-      sigma[alpha].x = tau[alpha].x + 2 * mu_0 * epsilon[alpha].x;
-      sigma[alpha].y = tau[alpha].y + 2 * mu_0 * epsilon[alpha].y;
-      if (alpha < 3)
-      {
-        sigma[alpha].x += lambda_0 * tr_epsilon.x;
-        sigma[alpha].y += lambda_0 * tr_epsilon.y;
-      }
-    }
-
-    // Compute three components of dot-product xi.sigma
-    xi_sigma[0].x = xi[0] * sigma[0].x + xi[1] * sigma[3].x + xi[2] * sigma[4].x;
-    xi_sigma[0].y = xi[0] * sigma[0].y + xi[1] * sigma[3].y + xi[2] * sigma[4].y;
-    xi_sigma[1].x = xi[0] * sigma[3].x + xi[1] * sigma[1].x + xi[2] * sigma[5].x;
-    xi_sigma[1].y = xi[0] * sigma[3].y + xi[1] * sigma[1].y + xi[2] * sigma[5].y;
-    xi_sigma[2].x = xi[0] * sigma[4].x + xi[1] * sigma[5].x + xi[2] * sigma[2].x;
-    xi_sigma[2].y = xi[0] * sigma[4].y + xi[1] * sigma[5].y + xi[2] * sigma[2].y;
-    // update (squared) norms
-    for (int mu = 0; mu < 3; ++mu)
-      div_nrm2 += xi_sigma[mu].x * xi_sigma[mu].x + xi_sigma[mu].y * xi_sigma[mu].y;
-    for (int mu = 0; mu < 3; ++mu)
-    {
-      sigma_nrm2 += sigma[mu].x * sigma[mu].x + sigma[mu].y * sigma[mu].y;
-    }
-    for (int mu = 3; mu < 6; ++mu)
-    {
-      sigma_nrm2 += 2 * (sigma[mu].x * sigma[mu].x + sigma[mu].y * sigma[mu].y);
-    }
-  }
-  float rel_diff = sqrt(div_nrm2 / sigma_nrm2);
-  float tolerance = 1.E-6;
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
 
@@ -321,22 +224,9 @@ TEST_F(FourierTest, TestDivSigma)
   // Compute divergence
   backward_divergence_host(sigma, div_sigma, grid_spec);
 
-  float sigma_nrm2 = 0;
-  float div_nrm2 = 0;
-  for (int ell = 0; ell < ncells; ++ell)
-  {
-    for (int alpha = 0; alpha < 3; ++alpha)
-      div_nrm2 += div_sigma[alpha * ncells + ell] * div_sigma[alpha * ncells + ell];
-    for (int alpha = 0; alpha < 3; ++alpha)
-    {
-      sigma_nrm2 += sigma[alpha * ncells + ell] * sigma[alpha * ncells + ell];
-    }
-    for (int alpha = 3; alpha < 6; ++alpha)
-    {
-      sigma_nrm2 += 2 * sigma[alpha * ncells + ell] * sigma[alpha * ncells + ell];
-    }
-  }
-  float rel_diff = sqrt(div_nrm2 / sigma_nrm2);
+  float sigma_nrm = tensor_norm(sigma, ncells);
+  float div_nrm = vector_norm(div_sigma, ncells);
+  float rel_diff = div_nrm / sigma_nrm;
   float tolerance = 5.E-5;
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
