@@ -80,7 +80,7 @@ void LippmannSchwingerSolver::increment_solution(float *dev_epsilon, cufftComple
   increment_solution_kernel<<<nblocks, BLOCKSIZE>>>(dev_epsilon, dev_r, alpha, ndof);
 }
 
-/* Compute normalised divergence for stopping criterion */
+/* Compute normalised divergence for stopping criterion in Fourier space */
 float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_hat)
 {
   // Compute divergence in Fourier space

@@ -24,9 +24,6 @@ protected:
     grid_spec.Ly = 0.9;
     grid_spec.Lz = 0.7;
   }
-  void TearDown() override
-  {
-  }
   /* Grid specification */
   GridSpec grid_spec;
 };
@@ -55,7 +52,16 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
                 { return distribution(rng); });
 
   backward_divergence_host(sigma, div_sigma, grid_spec);
-  float reldiv_real = vector_norm(div_sigma, ncells) / tensor_norm(sigma, ncells);
+  float sigma_avg[6];
+  for (int alpha = 0; alpha < 6; ++alpha)
+  {
+    sigma_avg[alpha] = 0;
+    for (int j = 0; j < ncells; ++j)
+      sigma_avg[alpha] += sigma[alpha * ncells + j];
+    sigma_avg[alpha] /= ncells;
+  }
+
+  float reldiv_real = vector_norm(div_sigma, ncells) / tensor_norm(sigma_avg, 1);
   LippmannSchwingerSolver solver(grid_spec);
 
   /* cuFFT plan */
@@ -69,12 +75,14 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
   CUDA_CHECK(cudaDeviceSynchronize());
 
   float reldiv_fourier = solver.relative_divergence_norm(dev_sigma_hat);
-  printf("%8.4e %8.4e\n", reldiv_real, reldiv_fourier);
+  float rel_diff = (reldiv_fourier - reldiv_real) / reldiv_real;
   // free memory
   CUDA_CHECK(cudaFree(dev_sigma));
   CUDA_CHECK(cudaFree(dev_sigma_hat));
   CUDA_CHECK(cudaFreeHost(sigma));
   CUDA_CHECK(cudaFreeHost(div_sigma));
+  float tolerance = 1.E-4;
+  EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
 
 #endif // TEST_LIPPMANN_SCHWINGER_HH

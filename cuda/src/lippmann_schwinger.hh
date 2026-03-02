@@ -54,14 +54,14 @@ public:
     int apply(float *lambda, float *mu, float *epsilon_bar,
               float *epsilon, float *sigma,
               float tolerance, int maxiter);
-              
+
     /** @brief Compute normalised divergence for stopping criterion in Fourier space
      *
      * Compute the relative divergence norm
      *
      *      sqrt(<||div(sigma)||^2>) / ||<sigma>||
      *
-     * Which in Fourier space is given by
+     * which in Fourier space is given by
      *
      *      sqrt(<||xi.hat(sigma)||^2>) / ||hat(sigma)(0)||
      *
