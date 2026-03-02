@@ -136,7 +136,7 @@ TEST_F(LippmannSchwingerTest, TestConvergence)
                 { return distribution(rng); });
 
   LippmannSchwingerSolver solver(grid_spec);
-  int iter = solver.apply(lambda, mu, epsilon_bar, epsilon, sigma, 1.E-5, 1.E-4);
+  int iter = solver.apply(lambda, mu, epsilon_bar, epsilon, sigma, 1.E-5);
 
   // normalised divergence
   backward_divergence_host(sigma, div_sigma, grid_spec);

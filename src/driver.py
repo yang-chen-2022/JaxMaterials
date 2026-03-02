@@ -62,11 +62,9 @@ with measure_time("evaluation [Jax]"):
 
 with measure_time("evaluation [CUDA]"):
     epsilon, sigma, iter = lippmann_schwinger_cuda(
-        lmbda, mu, E_mean, grid_spec, maxiter=32, tolerance=tolerance
+        lmbda, mu, E_mean, grid_spec, maxiter=32, atol=tolerance
     )
-    epsilon.block_until_ready()
 
-print(f"finished evaluation after {iter:5d} iterations")
 with measure_time("gradient"):
     grad_epsilon = jax.jacfwd(lippmann_schwinger, argnums=[2])
     dg = grad_epsilon(lmbda, mu, E_mean, grid_spec, depth=depth, tolerance=tolerance)

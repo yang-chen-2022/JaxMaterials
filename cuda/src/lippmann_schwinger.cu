@@ -8,7 +8,7 @@ __global__ void set_epsilon_bar_kernel(float *dev_epsilon, float *epsilon_bar, c
   int ell = blockDim.x * blockIdx.x + threadIdx.x;
   if (ell < ncells)
     for (int alpha = 0; alpha < 6; ++alpha)
-      dev_epsilon[alpha * ncells + ell] = alpha;
+      dev_epsilon[alpha * ncells + ell] = epsilon_bar[alpha];
 }
 
 /* Kernel for computing stress sigma_{ij} = C_{ijkl} epsilon_{kl} with
@@ -127,6 +127,7 @@ LippmannSchwingerSolver::LippmannSchwingerSolver(const GridSpec grid_spec, const
   CUDA_CHECK(cudaMalloc(&dev_sigma_hat, 6 * ncells * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMalloc(&dev_residual, 6 * ncells * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMallocHost(&sigma_0, 6 * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMalloc(&dev_epsilon_bar, 6 * sizeof(cufftComplex)));
   // initialize Fourier vectors
   initialize_xi(dev_xi, grid_spec);
   initialize_xizero(dev_xi_zero, grid_spec);
@@ -147,6 +148,7 @@ LippmannSchwingerSolver::~LippmannSchwingerSolver()
   CUDA_CHECK(cudaFree(dev_div_sigma_hat));
   CUDA_CHECK(cudaFree(dev_residual));
   CUDA_CHECK(cudaFree(dev_sigma_hat));
+  CUDA_CHECK(cudaFree(dev_epsilon_bar));
   CUDA_CHECK(cudaFreeHost(sigma_0));
   CUBLAS_CHECK(cublasDestroy(handle));
 }
@@ -164,9 +166,10 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
   // copy Lame parameters to device
   CUDA_CHECK(cudaMemcpy(dev_lambda, lambda, ncells * sizeof(float), cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(dev_mu, mu, ncells * sizeof(float), cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(dev_epsilon_bar, epsilon_bar, 6 * sizeof(float), cudaMemcpyHostToDevice));
 
   // set average value of epsilon
-  set_epsilon_bar(dev_epsilon, epsilon_bar);
+  set_epsilon_bar(dev_epsilon, dev_epsilon_bar);
   CUDA_CHECK(cudaDeviceSynchronize());
   // main Lippmann-Schwinger loop
   float rel_div_norm = 0;

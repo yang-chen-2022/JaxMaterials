@@ -10,3 +10,5 @@
 *.pvd
 **/__pycache__/
 linear_elasticity.pdf
+cuda/build/*
+cuda/CMakeFiles/*

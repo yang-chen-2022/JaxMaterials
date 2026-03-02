@@ -55,7 +55,7 @@ public:
      */
     int apply(float *lambda, float *mu, float *epsilon_bar,
               float *epsilon, float *sigma,
-              float rtol = 1.E-4, float atol = 1.E-7, int maxiter = 100);
+              float rtol = 1.E-4, float atol = 1.E-20, int maxiter = 100);
 
     /** @brief Compute normalised divergence for stopping criterion in Fourier space
      *
@@ -104,6 +104,8 @@ protected:
     float *dev_mu;
     /** @brief real-valued strain epsilon on device */
     float *dev_epsilon;
+    /** @brief real-valued mean strain epsilon on device */
+    float *dev_epsilon_bar;
     /** @brief real-valued stress sigma on device */
     float *dev_sigma;
     /** @brief divergence of sigma on device */
