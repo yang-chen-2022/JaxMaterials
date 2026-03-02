@@ -54,6 +54,20 @@ public:
     int apply(float *lambda, float *mu, float *epsilon_bar,
               float *epsilon, float *sigma,
               float tolerance, int maxiter);
+              
+    /** @brief Compute normalised divergence for stopping criterion in Fourier space
+     *
+     * Compute the relative divergence norm
+     *
+     *      sqrt(<||div(sigma)||^2>) / ||<sigma>||
+     *
+     * Which in Fourier space is given by
+     *
+     *      sqrt(<||xi.hat(sigma)||^2>) / ||hat(sigma)(0)||
+     *
+     * @param[in] dev_sigma_hat stress in Fourier space
+     */
+    float relative_divergence_norm(cufftComplex *dev_sigma_hat);
 
 protected:
     /** @brief Increment solution
@@ -69,20 +83,6 @@ protected:
      * @param[in] dev_increment increment (device array, size 6*ncells)
      */
     void increment_solution(float *dev_epsilon, cufftComplex *dev_increment);
-
-    /** @brief Compute normalised divergence for stopping criterion in Fourier space
-     *
-     * Compute the relative divergence norm
-     *
-     *      sqrt(<||div(sigma)||^2>) / ||<sigma>||
-     *
-     * Which in Fourier space is given by
-     *
-     *      sqrt(<||xi.hat(sigma)||^2>) / ||hat(sigma)(0)||
-     *
-     * @param[in] dev_sigma_hat stress in Fourier space
-     */
-    float relative_divergence_norm(cufftComplex *dev_sigma_hat);
 
     /* Set the values of epsilon to bar(epsilon) on the device */
     void set_epsilon_bar(float *dev_epsilon, float *epsilon_bar);

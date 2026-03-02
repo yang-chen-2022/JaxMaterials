@@ -88,9 +88,10 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_
   CUDA_CHECK(cudaDeviceSynchronize());
   int ncells = grid_spec.number_of_cells();
   // STEP 1: Compute nrm_div_sigma =  <||div(sigma)||^2>
-  float nrm2_div_sigma = 0;
-  CUBLAS_CHECK(cublasScnrm2(handle, 3 * ncells, dev_div_sigma_hat, 1, &nrm2_div_sigma));
-  nrm2_div_sigma /= ncells;
+  float nrm_div_sigma = 0;
+  CUBLAS_CHECK(cublasScnrm2(handle, 3 * ncells, dev_div_sigma_hat, 1, &nrm_div_sigma));
+  // Scale by number of cells
+  nrm_div_sigma /= sqrt(ncells);
   // STEP 2: compute ||<sigma>||^2
   float nrm2_sigma = 0;
   // Extract zero mode, which is identical to the sum of sigma over the domain, i.e. ncells * <sigma>
@@ -104,7 +105,7 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_
   // Compute norm of zero mode
   for (int alpha = 0; alpha < 6; ++alpha)
     nrm2_sigma += (1 + (2 < alpha)) * (sigma_0[alpha].x * sigma_0[alpha].x + sigma_0[alpha].y * sigma_0[alpha].y);
-  return sqrt(nrm2_div_sigma / nrm2_sigma);
+  return nrm_div_sigma / sqrt(nrm2_sigma);
 }
 
 /* Constructor */
