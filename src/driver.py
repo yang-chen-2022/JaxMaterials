@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 import jax
 from jaxmaterials.utilities import measure_time
 from jaxmaterials.solver.lippmann_schwinger import (
-    lippmann_schwinger,
+    lippmann_schwinger_jax,
     lippmann_schwinger_cuda,
 )
 
@@ -40,9 +40,6 @@ def initialise_material(grid_spec, fibre_radius=0.2, dtype=jnp.float64):
     return jnp.array(mu, dtype=dtype), jnp.array(lmbda, dtype=dtype)
 
 
-devices = jax.devices()
-print(f"Available Jax devices: {devices}")
-
 GridSpec = namedtuple("GridSpec", ["N", "L"])
 
 # Domain size in all three spatial direction
@@ -65,7 +62,7 @@ E_mean = jnp.array([1.0, 2.0, 0.0, 0.0, 0.0, 0.0], dtype=dtype)
 
 
 with measure_time("evaluation [Jax]"):
-    epsilon, sigma, iter = lippmann_schwinger(
+    epsilon, sigma, iter = lippmann_schwinger_jax(
         lmbda, mu, E_mean, grid_spec, maxiter=32, depth=depth, rtol=rtol, atol=atol
     )
     epsilon.block_until_ready()
@@ -76,22 +73,6 @@ with measure_time("evaluation [CUDA]"):
     )
 
 with measure_time("gradient"):
-    grad_epsilon = jax.jacfwd(lippmann_schwinger, argnums=[2])
+    grad_epsilon = jax.jacfwd(lippmann_schwinger_jax, argnums=[2])
     dg = grad_epsilon(lmbda, mu, E_mean, grid_spec, depth=depth, rtol=rtol, atol=atol)
     dg[0][0].block_until_ready()
-
-plotting = False
-if plotting:
-    X, Y = np.meshgrid(Lx / Nx * (0.5 + np.arange(Nx)), Ly / Ny * (0.5 + np.arange(Ny)))
-    # Plot strain field
-    plt.clf()
-    ax = plt.gca()
-    ax.set_aspect("equal")
-    plt.contourf(X, Y, epsilon[0, :, :, 0])
-    plt.savefig("epsilon.pdf", bbox_inches="tight")
-    # Plot stress field
-    plt.clf()
-    ax = plt.gca()
-    ax.set_aspect("equal")
-    plt.contourf(X, Y, sigma[0, :, :, 0])
-    plt.savefig("sigma.pdf", bbox_inches="tight")

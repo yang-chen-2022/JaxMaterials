@@ -10,7 +10,7 @@ from jaxmaterials.solver.fourier import get_xizero, get_xi, fourier_solve
 __all__ = [
     "relative_divergence",
     "relative_divergence_fourier",
-    "lippmann_schwinger",
+    "lippmann_schwinger_jax",
     "lippmann_schwinger_cuda",
 ]
 
@@ -74,8 +74,8 @@ def relative_divergence_fourier(sigma_hat, xi, grid_spec):
     return jnp.sqrt(dsigma_nrm2 / sigma_hat_zero_nrm2)
 
 
-@jax.jit(static_argnames=["grid_spec", "rtol", "atol", "depth"])
-def lippmann_schwinger(
+@jax.jit(static_argnames=["grid_spec", "rtol", "atol", "depth", "maxiter"])
+def lippmann_schwinger_jax(
     lmbda, mu, epsilon_bar, grid_spec, rtol=1e-6, atol=1e-20, depth=0, maxiter=32
 ):
     """Lippmann Schwinger iteration with Anderson acceleration for linear elasticity
@@ -126,7 +126,7 @@ def lippmann_schwinger(
     def loop_body(state):
         """Update strain, residual and stress according to update rule
 
-        :arg state: current iteration state (epsilon, residual, sigma, A, iter)
+        :arg state: current iteration state (epsilon, residual, sigma,sigma_hat, A_anderson, iter, rel_error)
         """
         epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter, rel_error = state
         # Solve reference problem hat{epsilon}_{kl} = -Gamma^0_{klij} hat{tau}_{ij}
@@ -190,6 +190,8 @@ def lippmann_schwinger_cuda(
 ):
     """Wrapper for CUDA Lippmann Schwinger solver
 
+    Required access to compiled library liblippmannschwinger.so
+
     :arg lmbda: spatially varying Lame parameter lambda
     :arg mu: spatially varying Lame parameter lambda
     :arg epsilon_bar: mean value of epsilon
@@ -202,10 +204,10 @@ def lippmann_schwinger_cuda(
     # Load cuda library
     try:
         lib = ctypes.CDLL("liblippmannschwinger.so")
-    except:
+    except Exception as exc:
         raise RuntimeError(
             "Unable to load cuda library liblippmannschwinger.so. Compile and check LD_LIBRARY_PATH."
-        )
+        ) from exc
     cuda_code = lib.lippmann_schwinger_solve
     cuda_code.argtypes = [
         np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
