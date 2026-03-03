@@ -33,30 +33,30 @@ void initialize_lame_parameters(float *lambda, float *mu, const GridSpec grid_sp
 int main()
 {
   // domain size
-  int cells[3] = {64, 64, 64};
+  int voxels[3] = {64, 64, 64};
   float extents[3] = {1.0, 1.0, 1.0};
   GridSpec grid_spec;
-  grid_spec.nx = cells[0];
-  grid_spec.ny = cells[1];
-  grid_spec.nz = cells[2];
+  grid_spec.nx = voxels[0];
+  grid_spec.ny = voxels[1];
+  grid_spec.nz = voxels[2];
   grid_spec.Lx = extents[0];
   grid_spec.Ly = extents[1];
   grid_spec.Lz = extents[2];
-  size_t ncells = cells[0] * cells[1] * cells[2];
+  size_t nvoxels = grid_spec.number_of_voxels();
   float *lambda;
   float *mu;
   float epsilon_bar[6] = {1.1, 0.4, 0.2, 1.5, 0.8, 0.7};
   float *epsilon;
   float *sigma;
-  CUDA_CHECK(cudaMallocHost(&lambda, ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&mu, ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&lambda, nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&mu, nvoxels * sizeof(float)));
   initialize_lame_parameters(lambda, mu, grid_spec);
-  CUDA_CHECK(cudaMallocHost(&epsilon, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&epsilon, 6 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&sigma, 6 * nvoxels * sizeof(float)));
   const float rtol = 1.E-6;
   const float atol = 1.E-4;
   const int maxiter = 32;
-  int niter = lippmann_schwinger_solve(lambda, mu, epsilon_bar, epsilon, sigma, cells, extents, rtol, atol, maxiter);
+  int niter = lippmann_schwinger_solve(lambda, mu, epsilon_bar, epsilon, sigma, voxels, extents, rtol, atol, maxiter);
 
   CUDA_CHECK(cudaFreeHost(lambda));
   CUDA_CHECK(cudaFreeHost(mu));

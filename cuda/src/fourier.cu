@@ -116,27 +116,27 @@ void initialize_xizero_host(float *xi_zero,
 
 /* Kernel for computing stress divergence in Fourier space */
 __global__ void divergence_fourier_kernel(cufftComplex *dev_sigma_hat, float *dev_xi,
-                                          cufftComplex *dev_div_sigma_hat, size_t ncells)
+                                          cufftComplex *dev_div_sigma_hat, size_t nvoxels)
 {
     int ell = blockDim.x * blockIdx.x + threadIdx.x;
-    if (ell < ncells)
+    if (ell < nvoxels)
     {
         float xi[3];
         float sigma_hat_x[6];
         float sigma_hat_y[6];
         for (int alpha = 0; alpha < 3; ++alpha)
-            xi[alpha] = dev_xi[alpha * ncells + ell];
+            xi[alpha] = dev_xi[alpha * nvoxels + ell];
         for (int alpha = 0; alpha < 6; ++alpha)
         {
-            sigma_hat_x[alpha] = dev_sigma_hat[alpha * ncells + ell].x;
-            sigma_hat_y[alpha] = dev_sigma_hat[alpha * ncells + ell].y;
+            sigma_hat_x[alpha] = dev_sigma_hat[alpha * nvoxels + ell].x;
+            sigma_hat_y[alpha] = dev_sigma_hat[alpha * nvoxels + ell].y;
         }
-        dev_div_sigma_hat[0 * ncells + ell].x = xi[0] * sigma_hat_x[0] + xi[1] * sigma_hat_x[3] + xi[2] * sigma_hat_x[4];
-        dev_div_sigma_hat[0 * ncells + ell].y = xi[0] * sigma_hat_y[0] + xi[1] * sigma_hat_y[3] + xi[2] * sigma_hat_y[4];
-        dev_div_sigma_hat[1 * ncells + ell].x = xi[0] * sigma_hat_x[3] + xi[1] * sigma_hat_x[1] + xi[2] * sigma_hat_x[5];
-        dev_div_sigma_hat[1 * ncells + ell].y = xi[0] * sigma_hat_y[3] + xi[1] * sigma_hat_y[1] + xi[2] * sigma_hat_y[5];
-        dev_div_sigma_hat[2 * ncells + ell].x = xi[0] * sigma_hat_x[4] + xi[1] * sigma_hat_x[5] + xi[2] * sigma_hat_x[2];
-        dev_div_sigma_hat[2 * ncells + ell].y = xi[0] * sigma_hat_y[4] + xi[1] * sigma_hat_y[5] + xi[2] * sigma_hat_y[2];
+        dev_div_sigma_hat[0 * nvoxels + ell].x = xi[0] * sigma_hat_x[0] + xi[1] * sigma_hat_x[3] + xi[2] * sigma_hat_x[4];
+        dev_div_sigma_hat[0 * nvoxels + ell].y = xi[0] * sigma_hat_y[0] + xi[1] * sigma_hat_y[3] + xi[2] * sigma_hat_y[4];
+        dev_div_sigma_hat[1 * nvoxels + ell].x = xi[0] * sigma_hat_x[3] + xi[1] * sigma_hat_x[1] + xi[2] * sigma_hat_x[5];
+        dev_div_sigma_hat[1 * nvoxels + ell].y = xi[0] * sigma_hat_y[3] + xi[1] * sigma_hat_y[1] + xi[2] * sigma_hat_y[5];
+        dev_div_sigma_hat[2 * nvoxels + ell].x = xi[0] * sigma_hat_x[4] + xi[1] * sigma_hat_x[5] + xi[2] * sigma_hat_x[2];
+        dev_div_sigma_hat[2 * nvoxels + ell].y = xi[0] * sigma_hat_y[4] + xi[1] * sigma_hat_y[5] + xi[2] * sigma_hat_y[2];
     }
 }
 
@@ -146,28 +146,28 @@ void divergence_fourier(cufftComplex *dev_sigma_hat,
                         float *dev_xi,
                         const GridSpec grid_spec)
 {
-    size_t ncells = grid_spec.number_of_cells();
-    const size_t nblocks = (ncells + BLOCKSIZE - 1) / BLOCKSIZE;
-    divergence_fourier_kernel<<<nblocks, BLOCKSIZE>>>(dev_sigma_hat, dev_xi, dev_div_sigma_hat, ncells);
+    size_t nvoxels = grid_spec.number_of_voxels();
+    const size_t nblocks = (nvoxels + BLOCKSIZE - 1) / BLOCKSIZE;
+    divergence_fourier_kernel<<<nblocks, BLOCKSIZE>>>(dev_sigma_hat, dev_xi, dev_div_sigma_hat, nvoxels);
 }
 
 /* kernel for Fourier solve in homogeneous isotropic reference material */
 __global__ void fourier_solve_kernel(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_hat,
                                      float *dev_xi_zero,
                                      const float C_A, const float C_B,
-                                     const size_t ncells)
+                                     const size_t nvoxels)
 {
     int ell = blockDim.x * blockIdx.x + threadIdx.x;
     float xi[3];
     cufftComplex tau_hat[6];
     cufftComplex epsilon_hat[6];
-    if (ell < ncells)
+    if (ell < nvoxels)
     {
         // copy into temporary arrays
         for (int mu = 0; mu < 3; ++mu)
-            xi[mu] = dev_xi_zero[mu * ncells + ell];
+            xi[mu] = dev_xi_zero[mu * nvoxels + ell];
         for (int mu = 0; mu < 6; ++mu)
-            tau_hat[mu] = dev_tau_hat[mu * ncells + ell];
+            tau_hat[mu] = dev_tau_hat[mu * nvoxels + ell];
         cufftComplex rho;
         rho.x = xi[0] * xi[0] * tau_hat[0].x +
                 xi[1] * xi[1] * tau_hat[1].x +
@@ -201,7 +201,7 @@ __global__ void fourier_solve_kernel(cufftComplex *dev_tau_hat, cufftComplex *de
         epsilon_hat[5].y = 0.5 * C_A * (xi[1] * xi[2] * (tau_hat[1].y + tau_hat[2].y) + (xi[1] * xi[1] + xi[2] * xi[2]) * tau_hat[5].y + xi[0] * (xi[1] * tau_hat[4].y + xi[2] * tau_hat[3].y)) + C_B * rho.y * xi[1] * xi[2];
         // copy back into solution vector
         for (int mu = 0; mu < 6; ++mu)
-            dev_epsilon_hat[mu * ncells + ell] = epsilon_hat[mu];
+            dev_epsilon_hat[mu * nvoxels + ell] = epsilon_hat[mu];
     }
 }
 
@@ -211,10 +211,10 @@ void fourier_solve_device(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_h
                           const float lambda_0, const float mu_0,
                           const GridSpec grid_spec)
 {
-    size_t ncells = grid_spec.number_of_cells();
-    const size_t nblocks = (ncells + BLOCKSIZE - 1) / BLOCKSIZE;
+    size_t nvoxels = grid_spec.number_of_voxels();
+    const size_t nblocks = (nvoxels + BLOCKSIZE - 1) / BLOCKSIZE;
     const float C_A = -1.0 / mu_0;
     const float C_B = (lambda_0 + mu_0) / (mu_0 * (lambda_0 + 2 * mu_0));
     fourier_solve_kernel<<<nblocks, BLOCKSIZE>>>(dev_tau_hat, dev_epsilon_hat, dev_xi_zero,
-                                                 C_A, C_B, ncells);
+                                                 C_A, C_B, nvoxels);
 }

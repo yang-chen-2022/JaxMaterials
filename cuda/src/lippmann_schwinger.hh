@@ -33,10 +33,10 @@ public:
      *
      *      C_{ijkl} = lambda*delta_{ij}delta_{kl} + mu*(delta_{ik}delta_{jl}+delta_{il}delta_{jk})
      *
-     * @param[in] dev_epsilon strain epsilon in real space (device array, size 6*ncells)
-     * @param[out] dev_sigma resulting stress sigma in real space (device array, size 6*ncells)
-     * @param[in] dev_lambda Lame parameter lambda (device array, size ncells)
-     * @param[in] dev_mu Lame parameter mu (device array, size ncells)
+     * @param[in] dev_epsilon strain epsilon in real space (device array, size 6*nvoxels)
+     * @param[out] dev_sigma resulting stress sigma in real space (device array, size 6*nvoxels)
+     * @param[in] dev_lambda Lame parameter lambda (device array, size nvoxels)
+     * @param[in] dev_mu Lame parameter mu (device array, size nvoxels)
      */
     void compute_stress(float *dev_epsilon, float *dev_sigma,
                         float *dev_lambda, float *dev_mu);
@@ -44,11 +44,11 @@ public:
     /** @brief Solve for a given set of Lame parameters
      *
      * @param[in]
-     * @param[in] lambda Lame parameter lambda (host array, size ncells)
-     * @param[in] mu Lame parameter mu (host array, size ncells)
+     * @param[in] lambda Lame parameter lambda (host array, size nvoxels)
+     * @param[in] mu Lame parameter mu (host array, size nvoxels)
      * @param[in] epsilon_bar average value of epsilon (host array, size 6)
-     * @param[out] epsilon Resulting strain (host array, size 6*ncells)
-     * @param[out] sigma Resulting stress (host array, size 6*ncells)
+     * @param[out] epsilon Resulting strain (host array, size 6*nvoxels)
+     * @param[out] sigma Resulting stress (host array, size 6*nvoxels)
      * @param[in] rtol relative tolerance on normalised divergence
      * @param[in] atol absolute tolerance on normalised divergence
      * @param[in] maxiter maximum number of iterations
@@ -76,13 +76,13 @@ protected:
      *
      * Increment
      *
-     *      epsilon -> epsilon + 1/ncells * r
+     *      epsilon -> epsilon + 1/nvoxels * r
      *
-     * where the factor 1/ncells arises since the inverse Fourier transformation
+     * where the factor 1/nvoxels arises since the inverse Fourier transformation
      * in cuFFT is not normalised.
      *
-     * @param[inout] dev_epsilon solution (device array, size 6*ncells)
-     * @param[in] dev_increment increment (device array, size 6*ncells)
+     * @param[inout] dev_epsilon solution (device array, size 6*nvoxels)
+     * @param[in] dev_increment increment (device array, size 6*nvoxels)
      */
     void increment_solution(float *dev_epsilon, cufftComplex *dev_increment);
 
@@ -128,12 +128,12 @@ protected:
  *
  * Provides an interface which can be called externally
  *
- * @param[in] lambda Lame parameter lambda (host array, size ncells)
- * @param[in] mu Lame parameter mu (host array, size ncells)
+ * @param[in] lambda Lame parameter lambda (host array, size nvoxels)
+ * @param[in] mu Lame parameter mu (host array, size nvoxels)
  * @param[in] epsilon_bar average value of epsilon (host array, size 6)
- * @param[out] epsilon Resulting strain (host array, size 6*ncells)
- * @param[out] sigma Resulting stress (host array, size 6*ncells)
- * @param[in] cells Number of cells (nx,ny,nz)
+ * @param[out] epsilon Resulting strain (host array, size 6*nvoxels)
+ * @param[out] sigma Resulting stress (host array, size 6*nvoxels)
+ * @param[in] voxels Number of voxels (nx,ny,nz)
  * @param[in] extents Size of domain in each direction (Lx,Ly,Lz)
  * @param[in] rtol relative tolerance on normalised divergence
  * @param[in] atol absolute tolerance on normalised divergence
@@ -145,7 +145,7 @@ extern "C"
 {
     int lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
                                  float *epsilon, float *sigma,
-                                 int *cells,
+                                 int *voxels,
                                  float *extents,
                                  float rtol, float atol, int maxiter);
 }

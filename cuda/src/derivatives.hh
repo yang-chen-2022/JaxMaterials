@@ -53,8 +53,8 @@ void backward_derivative_host(float *u, float *du,
  * For a given symmetric tensor sigma_{ij} in Voigt notation, compute the divergence
  * div(sigma)_i = dsigma_{ij}/dx_j using backward derivatives.
  *
- * @param[in] dev_sigma: field for which the derivative is computed (device pointer, size 6*ncells)
- * @param[out] dev_div_sigma: resulting divergence (device pointer, size 3*ncells)
+ * @param[in] dev_sigma: field for which the derivative is computed (device pointer, size 6*nvoxels)
+ * @param[out] dev_div_sigma: resulting divergence (device pointer, size 3*nvoxels)
  * @param[in] grid_spec: grid specification
  */
 void backward_divergence_device(float *dev_sigma, float *dev_div_sigma,
@@ -64,8 +64,8 @@ void backward_divergence_device(float *dev_sigma, float *dev_div_sigma,
  *
  * Equivalent implementation on host
  *
- * @param[in] sigma: field for which the derivative is computed (host pointer, size 6*ncells)
- * @param[out] div_sigma: resulting divergence (host pointer, size 3*ncells)
+ * @param[in] sigma: field for which the derivative is computed (host pointer, size 6*nvoxels)
+ * @param[out] div_sigma: resulting divergence (host pointer, size 3*nvoxels)
  * @param[in] grid_spec: grid specification
  */
 void backward_divergence_host(float *sigma, float *div_sigma,

@@ -31,33 +31,33 @@ protected:
     /* test backward derivative in a particular direction */
     void test_derivative(const int direction)
     {
-        size_t ncells = grid_spec.number_of_cells();
+        size_t nvoxels = grid_spec.number_of_voxels();
         // allocate host memory
         float *u = nullptr;
         float *du_dx = nullptr;
         float *du_dx_ref = nullptr;
-        CUDA_CHECK(cudaMallocHost(&u, ncells * sizeof(float)));
-        CUDA_CHECK(cudaMallocHost(&du_dx, ncells * sizeof(float)));
-        CUDA_CHECK(cudaMallocHost(&du_dx_ref, ncells * sizeof(float)));
+        CUDA_CHECK(cudaMallocHost(&u, nvoxels * sizeof(float)));
+        CUDA_CHECK(cudaMallocHost(&du_dx, nvoxels * sizeof(float)));
+        CUDA_CHECK(cudaMallocHost(&du_dx_ref, nvoxels * sizeof(float)));
 
         // initialise data
-        std::generate(u, u + ncells, [&]()
+        std::generate(u, u + nvoxels, [&]()
                       { return distribution(rng); });
         // allocate device memory
         float *dev_u = nullptr;
         float *dev_du_dx = nullptr;
-        CUDA_CHECK(cudaMalloc(&dev_u, ncells * sizeof(float)));
-        CUDA_CHECK(cudaMalloc(&dev_du_dx, ncells * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&dev_u, nvoxels * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&dev_du_dx, nvoxels * sizeof(float)));
 
-        CUDA_CHECK(cudaMemcpy(dev_u, u, ncells * sizeof(float), cudaMemcpyDefault));
+        CUDA_CHECK(cudaMemcpy(dev_u, u, nvoxels * sizeof(float), cudaMemcpyDefault));
 
         backward_derivative_device(dev_u, dev_du_dx, direction, grid_spec);
         CUDA_CHECK(cudaDeviceSynchronize());
         backward_derivative_host(u, du_dx_ref, direction, grid_spec);
 
-        CUDA_CHECK(cudaMemcpy(du_dx, dev_du_dx, ncells * sizeof(float),
+        CUDA_CHECK(cudaMemcpy(du_dx, dev_du_dx, nvoxels * sizeof(float),
                               cudaMemcpyDefault));
-        float rel_diff = relative_difference(du_dx, du_dx_ref, ncells);
+        float rel_diff = relative_difference(du_dx, du_dx_ref, nvoxels);
         CUDA_CHECK(cudaFree(dev_u));
         CUDA_CHECK(cudaFree(dev_du_dx));
         CUDA_CHECK(cudaFreeHost(u));
@@ -69,33 +69,33 @@ protected:
     /* test backward divergence*/
     void test_divergence()
     {
-        size_t ncells = grid_spec.number_of_cells();
+        size_t nvoxels = grid_spec.number_of_voxels();
         // allocate host memory
         float *sigma = nullptr;
         float *div_sigma = nullptr;
         float *div_sigma_ref = nullptr;
-        CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
-        CUDA_CHECK(cudaMallocHost(&div_sigma, 3 * ncells * sizeof(float)));
-        CUDA_CHECK(cudaMallocHost(&div_sigma_ref, 3 * ncells * sizeof(float)));
+        CUDA_CHECK(cudaMallocHost(&sigma, 6 * nvoxels * sizeof(float)));
+        CUDA_CHECK(cudaMallocHost(&div_sigma, 3 * nvoxels * sizeof(float)));
+        CUDA_CHECK(cudaMallocHost(&div_sigma_ref, 3 * nvoxels * sizeof(float)));
 
         // initialise data
-        std::generate(sigma, sigma + 6 * ncells, [&]()
+        std::generate(sigma, sigma + 6 * nvoxels, [&]()
                       { return distribution(rng); });
         // allocate device memory
         float *dev_sigma = nullptr;
         float *dev_div_sigma = nullptr;
-        CUDA_CHECK(cudaMalloc(&dev_sigma, 6 * ncells * sizeof(float)));
-        CUDA_CHECK(cudaMalloc(&dev_div_sigma, 3 * ncells * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&dev_sigma, 6 * nvoxels * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&dev_div_sigma, 3 * nvoxels * sizeof(float)));
 
-        CUDA_CHECK(cudaMemcpy(dev_sigma, sigma, 6 * ncells * sizeof(float), cudaMemcpyDefault));
+        CUDA_CHECK(cudaMemcpy(dev_sigma, sigma, 6 * nvoxels * sizeof(float), cudaMemcpyDefault));
 
         backward_divergence_device(dev_sigma, dev_div_sigma, grid_spec);
         CUDA_CHECK(cudaDeviceSynchronize());
         backward_divergence_host(sigma, div_sigma_ref, grid_spec);
 
-        CUDA_CHECK(cudaMemcpy(div_sigma, dev_div_sigma, 3 * ncells * sizeof(float),
+        CUDA_CHECK(cudaMemcpy(div_sigma, dev_div_sigma, 3 * nvoxels * sizeof(float),
                               cudaMemcpyDefault));
-        float rel_diff = relative_difference(div_sigma, div_sigma_ref, 3 * ncells);
+        float rel_diff = relative_difference(div_sigma, div_sigma_ref, 3 * nvoxels);
         CUDA_CHECK(cudaFree(dev_sigma));
         CUDA_CHECK(cudaFree(dev_div_sigma));
         CUDA_CHECK(cudaFreeHost(sigma));

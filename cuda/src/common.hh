@@ -55,18 +55,18 @@
 
 /** @brief Specification of computational grid
  *
- * Describes grid of the domain Lx x Ly x Lz with nx, ny, nz grid cells
+ * Describes grid of the domain Lx x Ly x Lz with nx, ny, nz grid voxels
  * (or voxels) in the different coordinate directions
  */
 struct GridSpec {
-  size_t nx; // Number of grid cells in x-direction
-  size_t ny; // Number of grid cells in y-direction
-  size_t nz; // Number of grid cells in z-direction
+  size_t nx; // Number of grid voxels in x-direction
+  size_t ny; // Number of grid voxels in y-direction
+  size_t nz; // Number of grid voxels in z-direction
   float Lx;  // Size of domain in x-direction
   float Ly;  // Size of domain in y-direction
   float Lz;  // Size of domain in z-direction
-  /** @brief Return total number of grid cells */
-  size_t number_of_cells() const { return nx * ny * nz; }
+  /** @brief Return total number of grid voxels */
+  size_t number_of_voxels() const { return nx * ny * nz; }
 };
 
 /** @brief Compute relative L2 norm
@@ -84,7 +84,7 @@ float relative_difference(float *u, float *u_ref, const size_t ndof);
  *
  * returns the norm
  *
- *    sqrt( sum_{n=0}^{ncells-1} ||u_n||^2 )
+ *    sqrt( sum_{n=0}^{nvoxels-1} ||u_n||^2 )
  *
  * where
  *
@@ -92,16 +92,16 @@ float relative_difference(float *u, float *u_ref, const size_t ndof);
  *
  * is the norm of the vector field u_j in a given cell with index j.
  *
- * @param[in] u vector field, host array of size 3*ncells
- * @param[in] ncells number of cells
+ * @param[in] u vector field, host array of size 3*nvoxels
+ * @param[in] nvoxels number of voxels
  */
-float vector_norm(float *u, const size_t ncells);
+float vector_norm(float *u, const size_t nvoxels);
 
 /** @brief Compute norm of complex-valued vector field
  *
  * returns the norm
  *
- *    sqrt( sum_{n=0}^{ncells-1} ||u_n||^2 )
+ *    sqrt( sum_{n=0}^{nvoxels-1} ||u_n||^2 )
  *
  * where
  *
@@ -109,16 +109,16 @@ float vector_norm(float *u, const size_t ncells);
  *
  * is the norm of the vector field u_j in a given cell with index j.
  *
- * @param[in] u vector field, host array of size 3*ncells
- * @param[in] ncells number of cells
+ * @param[in] u vector field, host array of size 3*nvoxels
+ * @param[in] nvoxels number of voxels
  */
-float vector_norm(cufftComplex *u, const size_t ncells);
+float vector_norm(cufftComplex *u, const size_t nvoxels);
 
 /** @brief Compute norm of real-valued tensor field in Voigt notation
  *
  * returns the norm
  *
- *    sqrt( sum_{n=0}^{ncells-1} ||tau_n||^2 )
+ *    sqrt( sum_{n=0}^{nvoxels-1} ||tau_n||^2 )
  *
  * where
  *
@@ -128,16 +128,16 @@ float vector_norm(cufftComplex *u, const size_t ncells);
  *
  * is the norm of the vector field tau_j in a given cell with index j.
  *
- * @param[in] u tensor field in Voigt notation, host array of size 6*ncells
- * @param[in] ncells number of cells
+ * @param[in] u tensor field in Voigt notation, host array of size 6*nvoxels
+ * @param[in] nvoxels number of voxels
  */
-float tensor_norm(float *tau, const size_t ncells);
+float tensor_norm(float *tau, const size_t nvoxels);
 
 /** @brief Compute norm of real-valued tensor field in Voigt notation
  *
  * returns the norm
  *
- *    sqrt( sum_{n=0}^{ncells-1} ||tau_n||^2 )
+ *    sqrt( sum_{n=0}^{nvoxels-1} ||tau_n||^2 )
  *
  * where
  *
@@ -147,9 +147,9 @@ float tensor_norm(float *tau, const size_t ncells);
  *
  * is the norm of the vector field tau_j in a given cell with index j.
  *
- * @param[in] u tensor field in Voigt notation, host array of size 6*ncells
- * @param[in] ncells number of cells
+ * @param[in] u tensor field in Voigt notation, host array of size 6*nvoxels
+ * @param[in] nvoxels number of voxels
  */
-float tensor_norm(cufftComplex *tau, const size_t ncells);
+float tensor_norm(cufftComplex *tau, const size_t nvoxels);
 
 #endif // COMMON_HH

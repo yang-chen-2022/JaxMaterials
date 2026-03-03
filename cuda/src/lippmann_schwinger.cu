@@ -3,12 +3,12 @@
 /* **** CUDA kernels **** */
 
 /* Kernel for setting the values of epsilon to the constant bar(epsilon) */
-__global__ void set_epsilon_bar_kernel(float *dev_epsilon, float *epsilon_bar, const size_t ncells)
+__global__ void set_epsilon_bar_kernel(float *dev_epsilon, float *epsilon_bar, const size_t nvoxels)
 {
   int ell = blockDim.x * blockIdx.x + threadIdx.x;
-  if (ell < ncells)
+  if (ell < nvoxels)
     for (int alpha = 0; alpha < 6; ++alpha)
-      dev_epsilon[alpha * ncells + ell] = epsilon_bar[alpha];
+      dev_epsilon[alpha * nvoxels + ell] = epsilon_bar[alpha];
 }
 
 /* Kernel for computing stress sigma_{ij} = C_{ijkl} epsilon_{kl} with
@@ -17,22 +17,22 @@ __global__ void set_epsilon_bar_kernel(float *dev_epsilon, float *epsilon_bar, c
  */
 __global__ void compute_stress_kernel(float *dev_epsilon, float *dev_sigma,
                                       float *dev_lambda, float *dev_mu,
-                                      const size_t ncells)
+                                      const size_t nvoxels)
 {
   int ell = blockDim.x * blockIdx.x + threadIdx.x;
-  if (ell < ncells)
+  if (ell < nvoxels)
   {
     float lambda = dev_lambda[ell];
     float mu = dev_mu[ell];
-    float tr_epsilon = dev_epsilon[ell] + dev_epsilon[ncells + ell] + dev_epsilon[2 * ncells + ell];
+    float tr_epsilon = dev_epsilon[ell] + dev_epsilon[nvoxels + ell] + dev_epsilon[2 * nvoxels + ell];
     for (int alpha = 0; alpha < 3; ++alpha)
     {
-      int idx = alpha * ncells + ell;
+      int idx = alpha * nvoxels + ell;
       dev_sigma[idx] = 2 * mu * dev_epsilon[idx] + lambda * tr_epsilon;
     }
     for (int alpha = 3; alpha < 6; ++alpha)
     {
-      int idx = alpha * ncells + ell;
+      int idx = alpha * nvoxels + ell;
       dev_sigma[idx] = 2 * mu * dev_epsilon[idx];
     }
   }
@@ -55,28 +55,28 @@ __global__ void increment_solution_kernel(float *dev_epsilon, cufftComplex *dev_
 /* Set the values of epsilon to bar(epsilon) on the device */
 void LippmannSchwingerSolver::set_epsilon_bar(float *dev_epsilon, float *epsilon_bar)
 {
-  size_t ncells = grid_spec.number_of_cells();
-  const size_t nblocks = (ncells + BLOCKSIZE - 1) / BLOCKSIZE;
-  set_epsilon_bar_kernel<<<nblocks, BLOCKSIZE>>>(dev_epsilon, epsilon_bar, ncells);
+  size_t nvoxels = grid_spec.number_of_voxels();
+  const size_t nblocks = (nvoxels + BLOCKSIZE - 1) / BLOCKSIZE;
+  set_epsilon_bar_kernel<<<nblocks, BLOCKSIZE>>>(dev_epsilon, epsilon_bar, nvoxels);
 }
 
 /* Compute stress sigma_{ij} = C_{ijkl} epsilon_{kl} on device */
 void LippmannSchwingerSolver::compute_stress(float *dev_epsilon, float *dev_sigma,
                                              float *dev_lambda, float *dev_mu)
 {
-  size_t ncells = grid_spec.number_of_cells();
-  const size_t nblocks = (ncells + BLOCKSIZE - 1) / BLOCKSIZE;
+  size_t nvoxels = grid_spec.number_of_voxels();
+  const size_t nblocks = (nvoxels + BLOCKSIZE - 1) / BLOCKSIZE;
   compute_stress_kernel<<<nblocks, BLOCKSIZE>>>(dev_epsilon, dev_sigma,
-                                                dev_lambda, dev_mu, ncells);
+                                                dev_lambda, dev_mu, nvoxels);
 }
 
-/* Increment solution epsilon -> epsilon + 1/ncells * r */
+/* Increment solution epsilon -> epsilon + 1/nvoxels * r */
 void LippmannSchwingerSolver::increment_solution(float *dev_epsilon, cufftComplex *dev_r)
 {
-  size_t ncells = grid_spec.number_of_cells();
-  size_t ndof = 6 * ncells;
+  size_t nvoxels = grid_spec.number_of_voxels();
+  size_t ndof = 6 * nvoxels;
   const size_t nblocks = (ndof + BLOCKSIZE - 1) / BLOCKSIZE;
-  float alpha = 1.0 / float(ncells);
+  float alpha = 1.0 / float(nvoxels);
   increment_solution_kernel<<<nblocks, BLOCKSIZE>>>(dev_epsilon, dev_r, alpha, ndof);
 }
 
@@ -86,20 +86,20 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_
   // Compute divergence in Fourier space
   divergence_fourier(dev_sigma_hat, dev_div_sigma_hat, dev_xi, grid_spec);
   CUDA_CHECK(cudaDeviceSynchronize());
-  size_t ncells = grid_spec.number_of_cells();
+  size_t nvoxels = grid_spec.number_of_voxels();
   // STEP 1: Compute nrm_div_sigma =  <||div(sigma)||^2>
   float nrm_div_sigma = 0;
-  CUBLAS_CHECK(cublasScnrm2(handle, 3 * ncells, dev_div_sigma_hat, 1, &nrm_div_sigma));
-  // Scale by number of cells
-  nrm_div_sigma /= sqrt(ncells);
+  CUBLAS_CHECK(cublasScnrm2(handle, 3 * nvoxels, dev_div_sigma_hat, 1, &nrm_div_sigma));
+  // Scale by number of voxels
+  nrm_div_sigma /= sqrt(nvoxels);
   // STEP 2: compute ||<sigma>||^2
-  // Extract zero mode, which is identical to the sum of sigma over the domain, i.e. ncells * <sigma>
-  CUDA_CHECK(cudaMemcpy2D(sigma_0, sizeof(cufftComplex), dev_sigma_hat, ncells * sizeof(cufftComplex), sizeof(cufftComplex), 6, cudaMemcpyDeviceToHost));
-  // Normalise by number of cells
+  // Extract zero mode, which is identical to the sum of sigma over the domain, i.e. nvoxels * <sigma>
+  CUDA_CHECK(cudaMemcpy2D(sigma_0, sizeof(cufftComplex), dev_sigma_hat, nvoxels * sizeof(cufftComplex), sizeof(cufftComplex), 6, cudaMemcpyDeviceToHost));
+  // Normalise by number of voxels
   for (int alpha = 0; alpha < 6; ++alpha)
   {
-    sigma_0[alpha].x /= ncells;
-    sigma_0[alpha].y /= ncells;
+    sigma_0[alpha].x /= nvoxels;
+    sigma_0[alpha].y /= nvoxels;
   }
   // Compute norm of zero mode
 
@@ -110,22 +110,22 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_
 /* Constructor */
 LippmannSchwingerSolver::LippmannSchwingerSolver(const GridSpec grid_spec, const int verbose) : grid_spec(grid_spec), verbose(verbose)
 {
-  size_t ncells = grid_spec.number_of_cells();
+  size_t nvoxels = grid_spec.number_of_voxels();
   // Initialise cuBLAS
   CUBLAS_CHECK(cublasCreate(&handle));
   // Set up cuFFT plan
   int n[3] = {(int)grid_spec.nz, (int)grid_spec.ny, (int)grid_spec.nx};
-  CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, ncells, n, 1, ncells, CUFFT_C2C, 6));
-  CUDA_CHECK(cudaMalloc(&dev_xi_zero, 3 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&dev_xi, 3 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&dev_lambda, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&dev_mu, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&dev_epsilon, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&dev_sigma, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&dev_div_sigma, 3 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&dev_div_sigma_hat, 3 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_sigma_hat, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_residual, 6 * ncells * sizeof(cufftComplex)));
+  CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, nvoxels, n, 1, nvoxels, CUFFT_C2C, 6));
+  CUDA_CHECK(cudaMalloc(&dev_xi_zero, 3 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_xi, 3 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_lambda, 6 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_mu, 6 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_epsilon, 6 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_sigma, 6 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_div_sigma, 3 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_div_sigma_hat, 3 * nvoxels * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMalloc(&dev_sigma_hat, 6 * nvoxels * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMalloc(&dev_residual, 6 * nvoxels * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMallocHost(&sigma_0, 6 * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMalloc(&dev_epsilon_bar, 6 * sizeof(cufftComplex)));
   // initialize Fourier vectors
@@ -158,14 +158,14 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
                                    float *epsilon, float *sigma,
                                    float rtol, float atol, int maxiter)
 {
-  size_t ncells = grid_spec.number_of_cells();
+  size_t nvoxels = grid_spec.number_of_voxels();
   // Average values of lambda and mu
-  float lambda_0 = 0.5 * (*std::max_element(lambda, lambda + ncells) + *std::min_element(lambda, lambda + ncells));
-  float mu_0 = 0.5 * (*std::max_element(mu, mu + ncells) + *std::min_element(mu, mu + ncells));
+  float lambda_0 = 0.5 * (*std::max_element(lambda, lambda + nvoxels) + *std::min_element(lambda, lambda + nvoxels));
+  float mu_0 = 0.5 * (*std::max_element(mu, mu + nvoxels) + *std::min_element(mu, mu + nvoxels));
 
   // copy Lame parameters to device
-  CUDA_CHECK(cudaMemcpy(dev_lambda, lambda, ncells * sizeof(float), cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dev_mu, mu, ncells * sizeof(float), cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(dev_lambda, lambda, nvoxels * sizeof(float), cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(dev_mu, mu, nvoxels * sizeof(float), cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(dev_epsilon_bar, epsilon_bar, 6 * sizeof(float), cudaMemcpyHostToDevice));
 
   // set average value of epsilon
@@ -185,8 +185,8 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
     /* ==== STEP 1 ==== Compute stress: sigma_{ij} = C_{ijkl} epsilon_{kl} */
     compute_stress(dev_epsilon, dev_sigma, dev_lambda, dev_mu);
     /* ==== STEP 2 ==== Fourier transform:  hat(sigma) = FFT(sigma)*/
-    CUDA_CHECK(cudaMemset(dev_sigma_hat, 0, 6 * ncells * sizeof(cufftComplex)));
-    CUDA_CHECK(cudaMemcpy2D(dev_sigma_hat, 2 * sizeof(float), dev_sigma, sizeof(float), sizeof(float), 6 * ncells, cudaMemcpyDeviceToDevice));
+    CUDA_CHECK(cudaMemset(dev_sigma_hat, 0, 6 * nvoxels * sizeof(cufftComplex)));
+    CUDA_CHECK(cudaMemcpy2D(dev_sigma_hat, 2 * sizeof(float), dev_sigma, sizeof(float), sizeof(float), 6 * nvoxels, cudaMemcpyDeviceToDevice));
     CUFFT_CHECK(cufftExecC2C(plan, dev_sigma_hat, dev_sigma_hat, CUFFT_FORWARD));
     CUDA_CHECK(cudaDeviceSynchronize());
     /* ==== STEP 3 ==== Check convergence */
@@ -220,8 +220,8 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
     printf(" after %4d its, ||r|| = %6.3e  ||r||/||r_0|| = %6.3e\n", iter, rel_div_norm, rel_div_norm / rel_div_norm0);
   }
   // Copy solution back to host
-  CUDA_CHECK(cudaMemcpy(epsilon, dev_epsilon, 6 * ncells * sizeof(float), cudaMemcpyDeviceToHost));
-  CUDA_CHECK(cudaMemcpy(sigma, dev_sigma, 6 * ncells * sizeof(float), cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpy(epsilon, dev_epsilon, 6 * nvoxels * sizeof(float), cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpy(sigma, dev_sigma, 6 * nvoxels * sizeof(float), cudaMemcpyDeviceToHost));
 
   return iter;
 }
@@ -230,14 +230,14 @@ extern "C"
 {
   int lippmann_schwinger_solve(float *lambda, float *mu, float *epsilon_bar,
                                float *epsilon, float *sigma,
-                               int *cells,
+                               int *voxels,
                                float *extents,
                                float rtol, float atol, int maxiter)
   {
     GridSpec grid_spec;
-    grid_spec.nx = cells[0];
-    grid_spec.ny = cells[1];
-    grid_spec.nz = cells[2];
+    grid_spec.nx = voxels[0];
+    grid_spec.ny = voxels[1];
+    grid_spec.nz = voxels[2];
     grid_spec.Lx = extents[0];
     grid_spec.Ly = extents[1];
     grid_spec.Lz = extents[2];

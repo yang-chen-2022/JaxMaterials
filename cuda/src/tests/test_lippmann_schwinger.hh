@@ -37,18 +37,18 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
   /* normal distribution */
   std::normal_distribution<float> distribution;
 
-  size_t ncells = grid_spec.number_of_cells();
+  size_t nvoxels = grid_spec.number_of_voxels();
   cufftComplex *dev_sigma_hat = nullptr;
   cufftComplex *dev_sigma = nullptr;
   float *sigma = nullptr;
   float *div_sigma = nullptr;
-  CUDA_CHECK(cudaMalloc(&dev_sigma, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_sigma_hat, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&div_sigma, 3 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_sigma, 6 * nvoxels * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMalloc(&dev_sigma_hat, 6 * nvoxels * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMallocHost(&sigma, 6 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&div_sigma, 3 * nvoxels * sizeof(float)));
 
   // Initialize sigma with random numbers
-  std::generate(sigma, sigma + 6 * ncells, [&]()
+  std::generate(sigma, sigma + 6 * nvoxels, [&]()
                 { return distribution(rng); });
 
   backward_divergence_host(sigma, div_sigma, grid_spec);
@@ -56,20 +56,20 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
   for (int alpha = 0; alpha < 6; ++alpha)
   {
     sigma_avg[alpha] = 0;
-    for (int j = 0; j < ncells; ++j)
-      sigma_avg[alpha] += sigma[alpha * ncells + j];
-    sigma_avg[alpha] /= ncells;
+    for (int j = 0; j < nvoxels; ++j)
+      sigma_avg[alpha] += sigma[alpha * nvoxels + j];
+    sigma_avg[alpha] /= nvoxels;
   }
 
-  float reldiv_real = vector_norm(div_sigma, ncells) / tensor_norm(sigma_avg, 1);
+  float reldiv_real = vector_norm(div_sigma, nvoxels) / tensor_norm(sigma_avg, 1);
   LippmannSchwingerSolver solver(grid_spec);
 
   /* cuFFT plan */
   cufftHandle plan;
   int n[3] = {(int)grid_spec.nz, (int)grid_spec.ny, (int)grid_spec.nx};
-  CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, ncells, n, 1, ncells, CUFFT_C2C, 6));
-  CUDA_CHECK(cudaMemset(dev_sigma, 0, 6 * ncells * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMemcpy2D(dev_sigma, 2 * sizeof(float), sigma, sizeof(float), sizeof(float), 6 * ncells, cudaMemcpyHostToDevice));
+  CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, nvoxels, n, 1, nvoxels, CUFFT_C2C, 6));
+  CUDA_CHECK(cudaMemset(dev_sigma, 0, 6 * nvoxels * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMemcpy2D(dev_sigma, 2 * sizeof(float), sigma, sizeof(float), sizeof(float), 6 * nvoxels, cudaMemcpyHostToDevice));
   // Fourier transform sigma
   CUFFT_CHECK(cufftExecC2C(plan, dev_sigma, dev_sigma_hat, CUFFT_FORWARD));
   CUDA_CHECK(cudaDeviceSynchronize());
@@ -89,18 +89,18 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
  */
 TEST_F(LippmannSchwingerTest, TestHomogeneousMaterial)
 {
-  size_t ncells = grid_spec.number_of_cells();
+  size_t nvoxels = grid_spec.number_of_voxels();
   float *mu = nullptr;
   float *lambda = nullptr;
   float *epsilon = nullptr;
   float *sigma = nullptr;
   float epsilon_bar[6] = {1.0, 0.4, 0.3, 0.1, -0.4, 0.7};
-  CUDA_CHECK(cudaMallocHost(&mu, ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&lambda, ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&epsilon, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
-  std::fill(mu, mu + ncells, 1.2);
-  std::fill(lambda, lambda + ncells, 1.2);
+  CUDA_CHECK(cudaMallocHost(&mu, nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&lambda, nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&epsilon, 6 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&sigma, 6 * nvoxels * sizeof(float)));
+  std::fill(mu, mu + nvoxels, 1.2);
+  std::fill(lambda, lambda + nvoxels, 1.2);
 
   LippmannSchwingerSolver solver(grid_spec);
   int iter = solver.apply(lambda, mu, epsilon_bar, epsilon, sigma);
@@ -115,24 +115,24 @@ TEST_F(LippmannSchwingerTest, TestHomogeneousMaterial)
  */
 TEST_F(LippmannSchwingerTest, TestConvergence)
 {
-  size_t ncells = grid_spec.number_of_cells();
+  size_t nvoxels = grid_spec.number_of_voxels();
   float *mu = nullptr;
   float *lambda = nullptr;
   float *epsilon = nullptr;
   float *sigma = nullptr;
   float *div_sigma = nullptr;
   float epsilon_bar[6] = {1.0, 0.4, 0.3, 0.1, -0.4, 0.7};
-  CUDA_CHECK(cudaMallocHost(&mu, ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&lambda, ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&epsilon, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&sigma, 6 * ncells * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&div_sigma, 3 * ncells * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&mu, nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&lambda, nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&epsilon, 6 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&sigma, 6 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&div_sigma, 3 * nvoxels * sizeof(float)));
 
   std::default_random_engine rng;
   std::uniform_real_distribution<float> distribution(0.8, 0.9);
-  std::generate(mu, mu + ncells, [&]()
+  std::generate(mu, mu + nvoxels, [&]()
                 { return distribution(rng); });
-  std::generate(lambda, lambda + ncells, [&]()
+  std::generate(lambda, lambda + nvoxels, [&]()
                 { return distribution(rng); });
 
   LippmannSchwingerSolver solver(grid_spec);
@@ -140,14 +140,14 @@ TEST_F(LippmannSchwingerTest, TestConvergence)
 
   // normalised divergence
   backward_divergence_host(sigma, div_sigma, grid_spec);
-  float div_sigma_nrm = vector_norm(div_sigma, ncells);
+  float div_sigma_nrm = vector_norm(div_sigma, nvoxels);
   float sigma_avg[6];
   for (int alpha = 0; alpha < 6; ++alpha)
   {
     sigma_avg[alpha] = 0;
-    for (int j = 0; j < ncells; ++j)
-      sigma_avg[alpha] += sigma[alpha * ncells + j];
-    sigma_avg[alpha] /= ncells;
+    for (int j = 0; j < nvoxels; ++j)
+      sigma_avg[alpha] += sigma[alpha * nvoxels + j];
+    sigma_avg[alpha] /= nvoxels;
   }
   float sigma_avg_nrm = tensor_norm(sigma_avg, 1);
 
