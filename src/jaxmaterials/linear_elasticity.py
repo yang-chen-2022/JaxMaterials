@@ -386,7 +386,7 @@ def lippmann_schwinger(
 
 
 def lippmann_schwinger_cuda(
-    lmbda, mu, E_mean, grid_spec, rtol=1e-6, atol=1.0e-4, maxiter=32
+    lmbda, mu, E_mean, grid_spec, rtol=1e-6, atol=1.0e-4, maxiter=32, verbose=0
 ):
     # Load cuda library
     try:
@@ -407,6 +407,7 @@ def lippmann_schwinger_cuda(
         ctypes.c_float,
         ctypes.c_float,
         ctypes.c_int,
+        ctypes.c_int,
     ]
     cuda_code.restype = ctypes.c_int
     cells = np.array([64, 64, 64], dtype=np.int32)
@@ -424,5 +425,6 @@ def lippmann_schwinger_cuda(
         rtol,
         atol,
         maxiter,
+        verbose,
     )
     return epsilon, sigma, iter

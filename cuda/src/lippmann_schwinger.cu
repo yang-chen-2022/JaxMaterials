@@ -234,7 +234,8 @@ extern "C"
                                float *epsilon, float *sigma,
                                int *voxels,
                                float *extents,
-                               float rtol, float atol, int maxiter)
+                               float rtol, float atol, int maxiter,
+                               int verbose)
   {
     GridSpec grid_spec;
     grid_spec.nx = voxels[0];
@@ -243,7 +244,7 @@ extern "C"
     grid_spec.Lx = extents[0];
     grid_spec.Ly = extents[1];
     grid_spec.Lz = extents[2];
-    LippmannSchwingerSolver solver(grid_spec);
+    LippmannSchwingerSolver solver(grid_spec, verbose);
     int iter = solver.apply(lambda, mu, epsilon_bar,
                             epsilon, sigma,
                             rtol, atol, maxiter);

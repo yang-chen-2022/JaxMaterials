@@ -157,6 +157,7 @@ protected:
  * @param[in] rtol relative tolerance on normalised divergence
  * @param[in] atol absolute tolerance on normalised divergence
  * @param[in] maxiter maximum number of iterations
+ * @param[in] verbose verbosity level
  *
  * Returns the actual number of iterations
  */
@@ -166,7 +167,8 @@ extern "C"
                                  float *epsilon, float *sigma,
                                  int *voxels,
                                  float *extents,
-                                 float rtol, float atol, int maxiter);
+                                 float rtol, float atol, int maxiter,
+                                 int verbose);
 }
 
 #endif // LIPPMANN_SCHWINGER_HH
