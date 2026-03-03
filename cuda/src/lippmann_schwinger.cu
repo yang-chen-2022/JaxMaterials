@@ -89,22 +89,13 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_
   divergence_fourier(dev_sigma_hat, dev_div_sigma_hat, dev_xi, grid_spec);
   CUDA_CHECK(cudaDeviceSynchronize());
   size_t nvoxels = grid_spec.number_of_voxels();
-  // STEP 1: Compute nrm_div_sigma =  <||div(sigma)||^2>
+  // STEP 1: Compute nrm_div_sigma =  ||div(sigma)||
   float nrm_div_sigma = 0;
   CUBLAS_CHECK(cublasScnrm2(handle, 3 * nvoxels, dev_div_sigma_hat, 1, &nrm_div_sigma));
-  // Scale by number of voxels
-  nrm_div_sigma /= sqrt(nvoxels);
-  // STEP 2: compute ||<sigma>||^2
+  // STEP 2: compute ||hat(sigma)||
   // Extract zero mode, which is identical to the sum of sigma over the domain, i.e. nvoxels * <sigma>
   CUDA_CHECK(cudaMemcpy2D(sigma_0, sizeof(cufftComplex), dev_sigma_hat, nvoxels * sizeof(cufftComplex), sizeof(cufftComplex), 6, cudaMemcpyDeviceToHost));
-  // Normalise by number of voxels
-  for (int alpha = 0; alpha < 6; ++alpha)
-  {
-    sigma_0[alpha].x /= nvoxels;
-    sigma_0[alpha].y /= nvoxels;
-  }
   // Compute norm of zero mode
-
   float nrm_sigma = tensor_norm(sigma_0, 1);
   return nrm_div_sigma / nrm_sigma;
 }

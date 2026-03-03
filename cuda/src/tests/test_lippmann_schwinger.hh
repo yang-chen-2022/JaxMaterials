@@ -61,7 +61,7 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
     sigma_avg[alpha] /= nvoxels;
   }
 
-  float reldiv_real = vector_norm(div_sigma, nvoxels) / tensor_norm(sigma_avg, 1);
+  float reldiv_real = vector_norm(div_sigma, nvoxels) / (sqrt(nvoxels) * (sigma_avg, 1));
   LippmannSchwingerSolver solver(grid_spec);
 
   /* cuFFT plan */

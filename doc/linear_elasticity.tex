@@ -319,18 +319,18 @@ Define
 \end{equation}
 to obtain
 \begin{equation}
-R(\sigma) = \sqrt{\frac{\overline{\delta_0^2}+\overline{\delta_1^2}+\overline{\delta_2^2}}{\overline{\sigma}_0^2+\overline{\sigma}_1^2+\overline{\sigma}_2^2+2(\overline{\sigma}_3^2+\overline{\sigma}_4^2+\overline{\sigma}_5^2)}}
+R(\sigma) = \frac{\|\delta\|}{\sqrt{N}\|\overline{\sigma}\|}
 \end{equation}
 where
-\begin{xalignat}{2}
-    \overline{\delta^2_i} &= \frac{1}{N}\sum_{\vec{n}}\delta^2_{i\vec{n}}, &
-    \overline{\sigma_i} &= \frac{1}{N}\sum_{\vec{n}}\sigma_{i\vec{n}}.
+\begin{xalignat}{3}
+    \|\delta\| &= \sqrt{\sum_i\sum_{\vec{n}}\delta^2_{i\vec{n}}}, &
+    \overline{\sigma_i} &= \frac{1}{N}\sum_{\vec{n}}\sigma_{i\vec{n}}, &
+    \|\overline{\sigma}\| &= \sqrt{\overline{\sigma}_0^2+\overline{\sigma}_1^2+\overline{\sigma}_2^2 + 2(\overline{\sigma}_3^2+\overline{\sigma}_4^2+\overline{\sigma}_5^2)}
 \end{xalignat}
 Similarly, we find 
 \begin{equation}
-\widehat{R}(\widehat{\sigma}) = \sqrt{
-\frac{N(\overline{\widehat{\delta}_0^2}+\overline{\widehat{\delta}_1^2}+\overline{\widehat{\delta}_2^2})}{\left(\widehat{\sigma}_{0}^2+\widehat{\sigma}_{1}^2+\widehat{\sigma}_{2}^2+2(\widehat{\sigma}_{3}^2+\widehat{\sigma}_{4}^2+\widehat{\sigma}_{5}^2)\right)_{\vec{\xi}=0}}}
-\qquad\text{with\quad $\overline{\widehat{\delta}^2_i} = \frac{1}{N}\sum_{\vec{\xi}}|\widehat{\delta}_{i\vec{\xi}}|^2$}.
+\widehat{R}(\widehat{\sigma}) = \frac{\|\widehat{\delta}\|}{\|\widehat{\sigma}_{\vec{\xi}=0}\|}
+\qquad\text{with\quad $\|\widehat{\delta}\| = \sqrt{\sum_i\sum_{\vec{\xi}}|\widehat{\delta}_{i\vec{\xi}}|^2}$}.
 \end{equation}
 \subsection{Anderson acceleration}
 The Lippmann-Schwinger algorithm with Anderson acceleration \cite{wicht2021anderson} is shown in \cref{alg:lippmann_schwinger_anderson}. It requires additional storage of $2\times(d+1)$ tensors for the state $\varepsilon^{(s)}$ and residuals $r^{(s)}$, as well as a $(d+1)\times (d+1)$ matrix and vectors $u,v\in\mathbb{R}^{d+1}$.

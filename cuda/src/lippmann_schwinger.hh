@@ -77,7 +77,7 @@ public:
      *
      * which in Fourier space is given by
      *
-     *      sqrt(<||xi.hat(sigma)||^2>) / ||hat(sigma)(0)||
+     *      sqrt(N <||xi.hat(sigma)||^2>) / ||hat(sigma)(0)||
      *
      * @param[in] dev_sigma_hat stress in Fourier space
      */
