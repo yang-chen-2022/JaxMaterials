@@ -4,10 +4,10 @@ import numpy as np
 import torch
 import tqdm
 import h5py
-from jaxmaterials.distributions_fibres import (
+from jaxmaterials.data.distributions_fibres import (
     FibreDistribution2d,
 )
-from jaxmaterials.linear_elasticity import lippmann_schwinger
+from jaxmaterials.solver.lippmann_schwinger import lippmann_schwinger_cuda
 from matplotlib import pyplot as plt
 
 __all__ = ["LayeredFibresDataset", "LayeredFibresDatasetGenerator", "visualise_fibres"]
@@ -137,7 +137,7 @@ class LayeredFibresDatasetGenerator:
 
     def generate(self):
         # Generate data
-        GridSpec = namedtuple("GridSpec", ["N", "h"])
+        GridSpec = namedtuple("GridSpec", ["N", "L"])
         self._lame_parameters = np.empty(
             shape=(self.n_samples, 2, *self.number_of_cells), dtype=self.dtype
         )
@@ -157,9 +157,7 @@ class LayeredFibresDatasetGenerator:
 
             grid_spec = GridSpec(
                 N=tuple(self.number_of_cells),
-                h=tuple(
-                    np.asarray(self.domain_size) / np.asarray(self.number_of_cells)
-                ),
+                L=tuple(np.asarray(self.domain_size)),
             )
             mu, lmbda = (
                 self._lame_parameters[j, 0, ...],
@@ -168,9 +166,9 @@ class LayeredFibresDatasetGenerator:
             for k in range(6):
                 E_mean = np.zeros(shape=(6,), dtype=self.dtype)
                 E_mean[k] = 1.0
-                tolerance = 1.0e-8 if self.dtype == np.float64 else 1.0e-4
-                epsilon, sigma, iter = lippmann_schwinger(
-                    lmbda, mu, E_mean, grid_spec, tolerance=tolerance
+                rtol = 1.0e-12 if self.dtype == np.float64 else 1.0e-4
+                epsilon, sigma, iter = lippmann_schwinger_cuda(
+                    lmbda, mu, E_mean, grid_spec, rtol=rtol
                 )
                 self._sigma_bar[j, k, :] = jnp.mean(sigma, axis=(1, 2, 3))
 

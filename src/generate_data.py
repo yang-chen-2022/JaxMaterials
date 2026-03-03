@@ -1,8 +1,8 @@
 """Main script for visualising layered fibre dataset"""
 
 import numpy as np
-from jaxmaterials.distributions_fibres import FibreRadiusDistribution
-from jaxmaterials.data import (
+from jaxmaterials.data.distributions_fibres import FibreRadiusDistribution
+from jaxmaterials.data.data import (
     LayeredFibresDataset,
     LayeredFibresDatasetGenerator,
     visualise_fibres,
@@ -44,7 +44,7 @@ dataset_generator = LayeredFibresDatasetGenerator(
     lambda_fibre=0.1,
     lambda_material=0.5,
     lambda_void=1.0,
-    dtype=np.float64,
+    dtype=np.float32,
     rng=rng,
     verbose=True,
 )
