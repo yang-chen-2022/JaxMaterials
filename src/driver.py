@@ -20,7 +20,10 @@ def initialise_material(grid_spec, fibre_radius=0.2, dtype=jnp.float64):
     :arg dtype: data type
     """
     X, Y, Z = np.meshgrid(
-        *[L/float(n) * (1 / 2 + np.arange(n)) for (n, L) in zip(grid_spec.N, grid_spec.L)],
+        *[
+            L / float(n) * (1 / 2 + np.arange(n))
+            for (n, L) in zip(grid_spec.N, grid_spec.L)
+        ],
         indexing="ij",
     )
     mu = np.ones(shape=grid_spec.N) + 0.5 * (
@@ -48,7 +51,8 @@ Ny = 64
 Nz = 64
 
 dtype = jnp.float32
-tolerance = 1.0e-3
+rtol = 1e-4
+atol = 1e-20
 depth = 0
 
 grid_spec = GridSpec(N=(Nx, Ny, Nz), L=(Lx, Ly, Lz))
@@ -56,20 +60,21 @@ xi = get_xizero(grid_spec)
 mu, lmbda = initialise_material(grid_spec, dtype=dtype)
 E_mean = jnp.array([1.0, 2.0, 0.0, 0.0, 0.0, 0.0], dtype=dtype)
 
+
 with measure_time("evaluation [Jax]"):
     epsilon, sigma, iter = lippmann_schwinger(
-        lmbda, mu, E_mean, grid_spec, maxiter=32, depth=depth, tolerance=tolerance
+        lmbda, mu, E_mean, grid_spec, maxiter=32, depth=depth, rtol=rtol, atol=atol
     )
     epsilon.block_until_ready()
 
 with measure_time("evaluation [CUDA]"):
     epsilon, sigma, iter = lippmann_schwinger_cuda(
-        lmbda, mu, E_mean, grid_spec, maxiter=32, atol=tolerance, verbose=2
+        lmbda, mu, E_mean, grid_spec, maxiter=32, rtol=rtol, atol=atol, verbose=2
     )
 
 with measure_time("gradient"):
     grad_epsilon = jax.jacfwd(lippmann_schwinger, argnums=[2])
-    dg = grad_epsilon(lmbda, mu, E_mean, grid_spec, depth=depth, tolerance=tolerance)
+    dg = grad_epsilon(lmbda, mu, E_mean, grid_spec, depth=depth, rtol=rtol, atol=atol)
     dg[0][0].block_until_ready()
 
 plotting = False

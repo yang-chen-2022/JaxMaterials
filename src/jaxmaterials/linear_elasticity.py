@@ -299,9 +299,9 @@ def relative_divergence_fourier(sigma_hat, xi, grid_spec):
     return jnp.sqrt(dsigma_nrm2 / sigma_hat_zero_nrm2)
 
 
-@jax.jit(static_argnames=["grid_spec", "tolerance", "depth"])
+@jax.jit(static_argnames=["grid_spec", "rtol", "atol", "depth"])
 def lippmann_schwinger(
-    lmbda, mu, E_mean, grid_spec, tolerance=1e-8, depth=0, maxiter=32
+    lmbda, mu, E_mean, grid_spec, rtol=1e-6, atol=1e-20, depth=0, maxiter=32
 ):
     """Lippmann Schwinger iteration with Anderson acceleration for linear elasticity
 
@@ -332,24 +332,27 @@ def lippmann_schwinger(
     sigma = compute_sigma(lmbda, mu, epsilon[0, ...])
     # Fourier transform sigma
     sigma_hat = jnp.fft.fftn(sigma, axes=[-3, -2, -1])
+    rel_error = relative_divergence_fourier(sigma_hat, xi, grid_spec)
+    rel_error_0 = rel_error
 
     def exit_condition(state):
         """Check exit condition
 
-        Check whether <||div(sigma)||> / ||<sigma>|| > tolerance or iter < maxiter
+        Let e^i = <||div(sigma^i)||> / ||<sigma^i>|| be the current normalised divergence
 
-        :arg state: current iteration state (epsilon, residual, sigma, sigma_hat, A, iter)
+        This method checkes whether e^i < max (atol, rtol * e^0) or iter > maxiter
+
+        :arg state: current iteration state (epsilon, residual, sigma, A, iter, rel_error, rel_error_0)
         """
-        epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter = state
-        rel_error = relative_divergence_fourier(sigma_hat, xi, grid_spec)
-        return (rel_error > tolerance) & (iter < maxiter)
+        epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter, rel_error = state
+        return (rel_error > atol) & (rel_error > rtol * rel_error_0) & (iter < maxiter)
 
     def loop_body(state):
         """Update strain, residual and stress according to update rule
 
         :arg state: current iteration state (epsilon, residual, sigma, A, iter)
         """
-        epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter = state
+        epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter, rel_error = state
         # Solve reference problem hat{epsilon}_{kl} = -Gamma^0_{klij} hat{tau}_{ij}
         r_hat = fourier_solve(sigma_hat, lmbda0, mu0, xizero)
         r = jnp.real(jnp.fft.ifftn(r_hat, axes=[-3, -2, -1]))
@@ -373,13 +376,34 @@ def lippmann_schwinger(
         sigma = compute_sigma(lmbda, mu, epsilon[0, ...])
         # Fourier transform sigma
         sigma_hat = jnp.fft.fftn(sigma, axes=[-3, -2, -1])
+        rel_error = relative_divergence_fourier(sigma_hat, xi, grid_spec)
         iter += 1
-        return (epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter)
+        return (
+            epsilon,
+            residual,
+            sigma,
+            sigma_hat,
+            A_anderson,
+            u_rhs,
+            iter,
+            rel_error,
+        )
 
-    epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter = jax.lax.while_loop(
-        exit_condition,
-        loop_body,
-        init_val=(epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, 0),
+    epsilon, residual, sigma, sigma_hat, A_anderson, u_rhs, iter, rel_error = (
+        jax.lax.while_loop(
+            exit_condition,
+            loop_body,
+            init_val=(
+                epsilon,
+                residual,
+                sigma,
+                sigma_hat,
+                A_anderson,
+                u_rhs,
+                0,
+                rel_error_0,
+            ),
+        )
     )
 
     return epsilon[0, ...], sigma, iter
