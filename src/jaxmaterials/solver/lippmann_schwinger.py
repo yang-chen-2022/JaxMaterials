@@ -37,12 +37,14 @@ def relative_divergence(sigma, grid_spec):
     :arg sigma: stress
     :arg grid_spec: grid specification
     """
-    N = grid_spec.N[0] * grid_spec.N[1] * grid_spec.N[2]
+    nvoxels = grid_spec.N[0] * grid_spec.N[1] * grid_spec.N[2]
     dsigma = backward_divergence(sigma, grid_spec)
-    dsigma_nrm2 = jnp.sum(dsigma**2) / N
-    sigma_avg = jnp.sum(sigma, axis=[1, 2, 3]) / N
-    sigma_avg_nrm2 = jnp.sum(sigma_avg[:3] ** 2) + 2 * jnp.sum(sigma_avg[3:] ** 2)
-    return jnp.sqrt(dsigma_nrm2 / sigma_avg_nrm2)
+    dsigma_nrm = jnp.sqrt(jnp.sum(dsigma**2))
+    sigma_avg = jnp.mean(sigma, axis=[1, 2, 3])
+    sigma_avg_nrm = jnp.sqrt(
+        jnp.sum(sigma_avg[:3] ** 2) + 2 * jnp.sum(sigma_avg[3:] ** 2)
+    )
+    return dsigma_nrm / (jnp.sqrt(nvoxels) * sigma_avg_nrm)
 
 
 def relative_divergence_fourier(sigma_hat, xi, grid_spec):
@@ -52,7 +54,6 @@ def relative_divergence_fourier(sigma_hat, xi, grid_spec):
     :arg xi: Fourier vectors
     :arg grid_spec: grid specification
     """
-    N = grid_spec.N[0] * grid_spec.N[1] * grid_spec.N[2]
     dsigma_hat = jnp.stack(
         [
             xi[0, ...] * sigma_hat[0, ...]
@@ -66,12 +67,12 @@ def relative_divergence_fourier(sigma_hat, xi, grid_spec):
             + xi[2, ...] * sigma_hat[2, ...],
         ]
     )
-    dsigma_nrm2 = jnp.sum(jnp.abs(dsigma_hat) ** 2) / N
-    sigma_hat_zero = jnp.real(sigma_hat[:, 0, 0, 0]) / N
-    sigma_hat_zero_nrm2 = jnp.sum(sigma_hat_zero[:3] ** 2) + 2 * jnp.sum(
-        sigma_hat_zero[3:] ** 2
+    dsigma_nrm = jnp.sqrt(jnp.sum(jnp.abs(dsigma_hat) ** 2))
+    sigma_hat_zero = jnp.real(sigma_hat[:, 0, 0, 0])
+    sigma_hat_zero_nrm = jnp.sqrt(
+        jnp.sum(sigma_hat_zero[:3] ** 2) + 2 * jnp.sum(sigma_hat_zero[3:] ** 2)
     )
-    return jnp.sqrt(dsigma_nrm2 / sigma_hat_zero_nrm2)
+    return dsigma_nrm / sigma_hat_zero_nrm
 
 
 @jax.jit(static_argnames=["grid_spec", "rtol", "atol", "depth", "maxiter"])

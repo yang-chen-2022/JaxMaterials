@@ -1,5 +1,7 @@
 """Implementation of discrete derivatives"""
 
+from jax import numpy as jnp
+
 __all__ = ["backward_derivative", "backward_divergence"]
 
 
@@ -44,7 +46,7 @@ def backward_derivative(g, grid_spec, direction):
             - jnp.roll(g, (1, 1, 1), axis=(-3, -2, -1))
         )
 
-    return 1 / (4 * grid_spec.h[direction]) * dg
+    return 1 / (4 * grid_spec.L[direction] / grid_spec.N[direction]) * dg
 
 
 def backward_divergence(sigma, grid_spec):
