@@ -3,11 +3,15 @@ from collections import namedtuple
 from matplotlib import pyplot as plt
 import jax
 from jaxmaterials.utilities import measure_time
+from jaxmaterials.solver.lippmann_schwinger import (
+    lippmann_schwinger,
+    lippmann_schwinger_cuda,
+)
+
 
 # jax.config.update("jax_platform_name", "cpu")
 jax.config.update("jax_enable_x64", True)
 from jax import numpy as jnp
-from jaxmaterials.linear_elasticity import *
 
 
 def initialise_material(grid_spec, fibre_radius=0.2, dtype=jnp.float64):
@@ -56,7 +60,6 @@ atol = 1e-20
 depth = 0
 
 grid_spec = GridSpec(N=(Nx, Ny, Nz), L=(Lx, Ly, Lz))
-xi = get_xizero(grid_spec)
 mu, lmbda = initialise_material(grid_spec, dtype=dtype)
 E_mean = jnp.array([1.0, 2.0, 0.0, 0.0, 0.0, 0.0], dtype=dtype)
 
