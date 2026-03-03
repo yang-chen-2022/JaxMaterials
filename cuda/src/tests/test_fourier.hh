@@ -42,7 +42,7 @@ protected:
 
     // Initialise Fourier vectors
     initialize_xizero_host(xi_zero, grid_spec);
-    initialize_xizero(dev_xi_zero, grid_spec);
+    initialize_xizero_device(dev_xi_zero, grid_spec);
     int n[3] = {(int)grid_spec.nz, (int)grid_spec.ny, (int)grid_spec.nx};
     CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, nvoxels, n, 1, nvoxels, CUFFT_C2C, 6));
   }
@@ -151,7 +151,7 @@ TEST_F(FourierTest, TestFourierDivergence)
   CUDA_CHECK(cudaDeviceSynchronize());
 
   // compute divergence of hat(epsilon) in Fourier space on device
-  initialize_xi(dev_xi, grid_spec);
+  initialize_xi_device(dev_xi, grid_spec);
   divergence_fourier(dev_epsilon_hat, dev_div_epsilon_hat, dev_xi, grid_spec);
   cudaDeviceSynchronize();
   // Copy back to host

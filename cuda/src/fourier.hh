@@ -17,7 +17,7 @@
  * @param[out] dev_xi vectors tilde{xi} (device array, size 3*nvoxels)
  * @param[in] grid_spec specification of grid
  */
-void initialize_xi(float *dev_xi, const GridSpec grid_spec);
+void initialize_xi_device(float *dev_xi, const GridSpec grid_spec);
 
 /** @brief Construct Fourier vectors ring{tilde{xi}}_j on device
  *
@@ -38,7 +38,7 @@ void initialize_xi(float *dev_xi, const GridSpec grid_spec);
  * @param[out] dev_xi_zero vectors ring{tilde{xi}} (device array, size 3*nvoxels)
  * @param[in] grid_spec specification of grid
  */
-void initialize_xizero(float *dev_xi_zero, const GridSpec grid_spec);
+void initialize_xizero_device(float *dev_xi_zero, const GridSpec grid_spec);
 
 /** @brief Construct Fourier vectors ring{tilde{xi}}_j on host
  *

@@ -129,8 +129,8 @@ LippmannSchwingerSolver::LippmannSchwingerSolver(const GridSpec grid_spec, const
   CUDA_CHECK(cudaMallocHost(&sigma_0, 6 * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMalloc(&dev_epsilon_bar, 6 * sizeof(cufftComplex)));
   // initialize Fourier vectors
-  initialize_xi(dev_xi, grid_spec);
-  initialize_xizero(dev_xi_zero, grid_spec);
+  initialize_xi_device(dev_xi, grid_spec);
+  initialize_xizero_device(dev_xi_zero, grid_spec);
   CUDA_CHECK(cudaDeviceSynchronize());
 }
 

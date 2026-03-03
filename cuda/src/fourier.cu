@@ -25,8 +25,8 @@ __global__ void initialize_xi_kernel(float *dev_xi, const GridSpec grid_spec)
 }
 
 /* Initialize Fourier vectors*/
-void initialize_xi(float *dev_xi,
-                   const GridSpec grid_spec)
+void initialize_xi_device(float *dev_xi,
+                          const GridSpec grid_spec)
 {
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
@@ -70,8 +70,8 @@ __global__ void initialize_xizero_kernel(float *dev_xi_zero, const GridSpec grid
 }
 
 /* Initialize Fourier vectors*/
-void initialize_xizero(float *dev_xi_zero,
-                       const GridSpec grid_spec)
+void initialize_xizero_device(float *dev_xi_zero,
+                              const GridSpec grid_spec)
 {
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
