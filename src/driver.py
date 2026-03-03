@@ -9,6 +9,7 @@ jax.config.update("jax_enable_x64", True)
 from jax import numpy as jnp
 from jaxmaterials.linear_elasticity import *
 
+
 def initialise_material(grid_spec, fibre_radius=0.2, dtype=jnp.float64):
     """Material coefficients lambda and mu evaluated at voxel centres
 
@@ -30,6 +31,7 @@ def initialise_material(grid_spec, fibre_radius=0.2, dtype=jnp.float64):
         (X - 0.5) ** 2 + (Y - 0.5) ** 2 + (Z - 0.5) ** 2 < fibre_radius**2
     )
     return jnp.array(mu, dtype=dtype), jnp.array(lmbda, dtype=dtype)
+
 
 devices = jax.devices()
 print(f"Available Jax devices: {devices}")
@@ -62,7 +64,7 @@ with measure_time("evaluation [Jax]"):
 
 with measure_time("evaluation [CUDA]"):
     epsilon, sigma, iter = lippmann_schwinger_cuda(
-        lmbda, mu, E_mean, grid_spec, maxiter=32, atol=tolerance
+        lmbda, mu, E_mean, grid_spec, maxiter=32, atol=tolerance, verbose=2
     )
 
 with measure_time("gradient"):

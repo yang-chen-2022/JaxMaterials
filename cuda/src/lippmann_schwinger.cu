@@ -219,7 +219,7 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
       printf("converged");
     else
       printf("failed to converge");
-    printf(" after %4d its, ||r|| = %6.3e  ||r||/||r_0|| = %6.3e\n", iter, rel_div_norm, rel_div_norm / rel_div_norm0);
+    printf(" after %4d its, ||r|| = %6.3e ||r||/||r_0|| = %6.3e\n", iter, rel_div_norm, rel_div_norm / rel_div_norm0);
   }
   // Copy solution back to host
   CUDA_CHECK(cudaMemcpy(epsilon, dev_epsilon, 6 * nvoxels * sizeof(float), cudaMemcpyDeviceToHost));
