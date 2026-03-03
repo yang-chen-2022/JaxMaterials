@@ -1,11 +1,11 @@
 #ifndef TEST_LIPPMANN_SCHWINGER_HH
 #define TEST_LIPPMANN_SCHWINGER_HH TEST_LIPPMANN_SCHWINGER_HH
 #include <random>
-#include "cufft.h"
 #include <algorithm>
+#include <gtest/gtest.h>
+#include "cufft.h"
 #include "common.hh"
 #include "lippmann_schwinger.hh"
-#include <gtest/gtest.h>
 
 class LippmannSchwingerTest : public ::testing::Test
 {

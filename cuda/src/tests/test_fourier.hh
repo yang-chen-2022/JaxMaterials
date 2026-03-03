@@ -2,12 +2,12 @@
 #ifndef TEST_FOURIER_HH
 #define TEST_FOURIER_HH TEST_FOURIER_HH
 #include <random>
-#include "cufft.h"
 #include <algorithm>
+#include <gtest/gtest.h>
+#include "cufft.h"
 #include "common.hh"
 #include "derivatives.hh"
 #include "fourier.hh"
-#include <gtest/gtest.h>
 
 class FourierTest : public ::testing::Test
 {
