@@ -20,7 +20,7 @@ def initialise_material(grid_spec, fibre_radius=0.2, dtype=jnp.float64):
     :arg dtype: data type
     """
     X, Y, Z = np.meshgrid(
-        *[h * (1 / 2 + np.arange(n)) for (n, h) in zip(grid_spec.N, grid_spec.h)],
+        *[L/float(n) * (1 / 2 + np.arange(n)) for (n, L) in zip(grid_spec.N, grid_spec.L)],
         indexing="ij",
     )
     mu = np.ones(shape=grid_spec.N) + 0.5 * (
@@ -36,7 +36,7 @@ def initialise_material(grid_spec, fibre_radius=0.2, dtype=jnp.float64):
 devices = jax.devices()
 print(f"Available Jax devices: {devices}")
 
-GridSpec = namedtuple("GridSpec", ["N", "h"])
+GridSpec = namedtuple("GridSpec", ["N", "L"])
 
 # Domain size in all three spatial direction
 Lx = 1.0
@@ -51,7 +51,7 @@ dtype = jnp.float32
 tolerance = 1.0e-3
 depth = 0
 
-grid_spec = GridSpec(N=(Nx, Ny, Nz), h=(Lx / Nx, Ly / Ny, Lz / Nz))
+grid_spec = GridSpec(N=(Nx, Ny, Nz), L=(Lx, Ly, Lz))
 xi = get_xizero(grid_spec)
 mu, lmbda = initialise_material(grid_spec, dtype=dtype)
 E_mean = jnp.array([1.0, 2.0, 0.0, 0.0, 0.0, 0.0], dtype=dtype)

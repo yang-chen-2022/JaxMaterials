@@ -38,7 +38,7 @@ def get_xizero(grid_spec, dtype=jnp.float64):
     K = [2 * np.pi * np.arange(n) / n for n in grid_spec.N]
     # Grid with normalised momentum vectors
     xi = np.meshgrid(*K, indexing="ij")
-    h = grid_spec.h
+    h = np.asarray(grid_spec.L) / np.asarray(grid_spec.N)
     # Grid with tilde(xi)
     xi_tilde = np.stack(
         [
@@ -77,7 +77,7 @@ def get_xi(grid_spec, dtype=jnp.float64):
     K = [2 * np.pi * np.arange(n) / n for n in grid_spec.N]
     # Grid with normalised momentum vectors
     xi = np.meshgrid(*K, indexing="ij")
-    h = grid_spec.h
+    h = np.asarray(grid_spec.L) / np.asarray(grid_spec.N)
     # Grid with tilde(xi)
     xi = np.stack(
         [
@@ -386,7 +386,7 @@ def lippmann_schwinger(
 
 
 def lippmann_schwinger_cuda(
-    lmbda, mu, E_mean, grid_spec, rtol=1e-6, atol=1.0e-4, maxiter=32, verbose=0
+    lmbda, mu, E_mean, grid_spec, rtol=1e-6, atol=1.0e-20, maxiter=32, verbose=0
 ):
     # Load cuda library
     try:
@@ -410,8 +410,8 @@ def lippmann_schwinger_cuda(
         ctypes.c_int,
     ]
     cuda_code.restype = ctypes.c_int
-    cells = np.array([64, 64, 64], dtype=np.int32)
-    extents = np.array([1.0, 1.0, 1.0], dtype=np.float32)
+    cells = np.array(grid_spec.N, dtype=np.int32)
+    extents = np.array(grid_spec.L, dtype=np.float32)
     epsilon = jnp.empty((6,) + grid_spec.N, dtype=np.float32)
     sigma = jnp.empty((6,) + grid_spec.N, dtype=np.float32)
     iter = cuda_code(

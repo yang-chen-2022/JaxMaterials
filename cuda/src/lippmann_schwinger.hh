@@ -67,7 +67,7 @@ public:
      */
     int apply(float *lambda, float *mu, float *epsilon_bar,
               float *epsilon, float *sigma,
-              float rtol = 1.E-4, float atol = 1.E-20, int maxiter = 100);
+              float rtol, float atol, int maxiter = 100);
 
     /** @brief Compute normalised divergence for stopping criterion in Fourier space
      *
