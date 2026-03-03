@@ -4,9 +4,9 @@
 /* kernel to initialize Fourier vectors */
 __global__ void initialize_xi_kernel(float *dev_xi, const GridSpec grid_spec)
 {
-    int nx = grid_spec.nx;
-    int ny = grid_spec.ny;
-    int nz = grid_spec.nz;
+    size_t nx = grid_spec.nx;
+    size_t ny = grid_spec.ny;
+    size_t nz = grid_spec.nz;
     float two_hx_inv = 2 * grid_spec.nx / grid_spec.Lx;
     float two_hy_inv = 2 * grid_spec.ny / grid_spec.Ly;
     float two_hz_inv = 2 * grid_spec.nz / grid_spec.Lz;
@@ -28,9 +28,9 @@ __global__ void initialize_xi_kernel(float *dev_xi, const GridSpec grid_spec)
 void initialize_xi(float *dev_xi,
                    const GridSpec grid_spec)
 {
-    int nx = grid_spec.nx;
-    int ny = grid_spec.ny;
-    int nz = grid_spec.nz;
+    size_t nx = grid_spec.nx;
+    size_t ny = grid_spec.ny;
+    size_t nz = grid_spec.nz;
     dim3 grid((nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X,
               (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
               (nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z);
@@ -41,9 +41,9 @@ void initialize_xi(float *dev_xi,
 /* kernel to initialize Fourier vectors */
 __global__ void initialize_xizero_kernel(float *dev_xi_zero, const GridSpec grid_spec)
 {
-    int nx = grid_spec.nx;
-    int ny = grid_spec.ny;
-    int nz = grid_spec.nz;
+    size_t nx = grid_spec.nx;
+    size_t ny = grid_spec.ny;
+    size_t nz = grid_spec.nz;
     float two_hx_inv = 2 * grid_spec.nx / grid_spec.Lx;
     float two_hy_inv = 2 * grid_spec.ny / grid_spec.Ly;
     float two_hz_inv = 2 * grid_spec.nz / grid_spec.Lz;
@@ -73,9 +73,9 @@ __global__ void initialize_xizero_kernel(float *dev_xi_zero, const GridSpec grid
 void initialize_xizero(float *dev_xi_zero,
                        const GridSpec grid_spec)
 {
-    int nx = grid_spec.nx;
-    int ny = grid_spec.ny;
-    int nz = grid_spec.nz;
+    size_t nx = grid_spec.nx;
+    size_t ny = grid_spec.ny;
+    size_t nz = grid_spec.nz;
     dim3 grid((nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X,
               (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
               (nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z);
@@ -87,9 +87,9 @@ void initialize_xizero(float *dev_xi_zero,
 void initialize_xizero_host(float *xi_zero,
                             const GridSpec grid_spec)
 {
-    int nx = grid_spec.nx;
-    int ny = grid_spec.ny;
-    int nz = grid_spec.nz;
+    size_t nx = grid_spec.nx;
+    size_t ny = grid_spec.ny;
+    size_t nz = grid_spec.nz;
     float two_hx_inv = 2 * grid_spec.nx / grid_spec.Lx;
     float two_hy_inv = 2 * grid_spec.ny / grid_spec.Ly;
     float two_hz_inv = 2 * grid_spec.nz / grid_spec.Lz;
@@ -116,7 +116,7 @@ void initialize_xizero_host(float *xi_zero,
 
 /* Kernel for computing stress divergence in Fourier space */
 __global__ void divergence_fourier_kernel(cufftComplex *dev_sigma_hat, float *dev_xi,
-                                          cufftComplex *dev_div_sigma_hat, int ncells)
+                                          cufftComplex *dev_div_sigma_hat, size_t ncells)
 {
     int ell = blockDim.x * blockIdx.x + threadIdx.x;
     if (ell < ncells)
@@ -146,8 +146,8 @@ void divergence_fourier(cufftComplex *dev_sigma_hat,
                         float *dev_xi,
                         const GridSpec grid_spec)
 {
-    int ncells = grid_spec.number_of_cells();
-    const int nblocks = (ncells + BLOCKSIZE - 1) / BLOCKSIZE;
+    size_t ncells = grid_spec.number_of_cells();
+    const size_t nblocks = (ncells + BLOCKSIZE - 1) / BLOCKSIZE;
     divergence_fourier_kernel<<<nblocks, BLOCKSIZE>>>(dev_sigma_hat, dev_xi, dev_div_sigma_hat, ncells);
 }
 
@@ -155,7 +155,7 @@ void divergence_fourier(cufftComplex *dev_sigma_hat,
 __global__ void fourier_solve_kernel(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_hat,
                                      float *dev_xi_zero,
                                      const float C_A, const float C_B,
-                                     const int ncells)
+                                     const size_t ncells)
 {
     int ell = blockDim.x * blockIdx.x + threadIdx.x;
     float xi[3];
@@ -211,8 +211,8 @@ void fourier_solve_device(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_h
                           const float lambda_0, const float mu_0,
                           const GridSpec grid_spec)
 {
-    int ncells = grid_spec.number_of_cells();
-    const int nblocks = (ncells + BLOCKSIZE - 1) / BLOCKSIZE;
+    size_t ncells = grid_spec.number_of_cells();
+    const size_t nblocks = (ncells + BLOCKSIZE - 1) / BLOCKSIZE;
     const float C_A = -1.0 / mu_0;
     const float C_B = (lambda_0 + mu_0) / (mu_0 * (lambda_0 + 2 * mu_0));
     fourier_solve_kernel<<<nblocks, BLOCKSIZE>>>(dev_tau_hat, dev_epsilon_hat, dev_xi_zero,

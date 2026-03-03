@@ -37,7 +37,7 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
   /* normal distribution */
   std::normal_distribution<float> distribution;
 
-  int ncells = grid_spec.number_of_cells();
+  size_t ncells = grid_spec.number_of_cells();
   cufftComplex *dev_sigma_hat = nullptr;
   cufftComplex *dev_sigma = nullptr;
   float *sigma = nullptr;
@@ -66,7 +66,7 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
 
   /* cuFFT plan */
   cufftHandle plan;
-  int n[3] = {grid_spec.nz, grid_spec.ny, grid_spec.nx};
+  int n[3] = {(int)grid_spec.nz, (int)grid_spec.ny, (int)grid_spec.nx};
   CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, ncells, n, 1, ncells, CUFFT_C2C, 6));
   CUDA_CHECK(cudaMemset(dev_sigma, 0, 6 * ncells * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMemcpy2D(dev_sigma, 2 * sizeof(float), sigma, sizeof(float), sizeof(float), 6 * ncells, cudaMemcpyHostToDevice));
@@ -89,7 +89,7 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
  */
 TEST_F(LippmannSchwingerTest, TestHomogeneousMaterial)
 {
-  int ncells = grid_spec.number_of_cells();
+  size_t ncells = grid_spec.number_of_cells();
   float *mu = nullptr;
   float *lambda = nullptr;
   float *epsilon = nullptr;
@@ -115,7 +115,7 @@ TEST_F(LippmannSchwingerTest, TestHomogeneousMaterial)
  */
 TEST_F(LippmannSchwingerTest, TestConvergence)
 {
-  int ncells = grid_spec.number_of_cells();
+  size_t ncells = grid_spec.number_of_cells();
   float *mu = nullptr;
   float *lambda = nullptr;
   float *epsilon = nullptr;

@@ -25,7 +25,7 @@ protected:
     grid_spec.Ly = 0.9;
     grid_spec.Lz = 0.7;
     // random number generator
-    int ncells = grid_spec.number_of_cells();
+    size_t ncells = grid_spec.number_of_cells();
     // allocate memory
     CUDA_CHECK(cudaMallocHost(&xi_zero, 3 * ncells * sizeof(float)));
     CUDA_CHECK(cudaMallocHost(&tau, 6 * ncells * sizeof(float)));
@@ -43,7 +43,7 @@ protected:
     // Initialise Fourier vectors
     initialize_xizero_host(xi_zero, grid_spec);
     initialize_xizero(dev_xi_zero, grid_spec);
-    int n[3] = {grid_spec.nz, grid_spec.ny, grid_spec.nx};
+    int n[3] = {(int)grid_spec.nz, (int)grid_spec.ny, (int)grid_spec.nx};
     CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, ncells, n, 1, ncells, CUFFT_C2C, 6));
   }
   void TearDown() override
@@ -105,7 +105,7 @@ TEST_F(FourierTest, TestXiZero)
 {
   float tolerance = 1.E-6;
   // halo size
-  int ncells = grid_spec.number_of_cells();
+  size_t ncells = grid_spec.number_of_cells();
   // allocate host memory
   float *xi_zero_ref = nullptr;
   CUDA_CHECK(cudaMallocHost(&xi_zero_ref, 3 * ncells * sizeof(float)));
@@ -126,7 +126,7 @@ TEST_F(FourierTest, TestXiZero)
  */
 TEST_F(FourierTest, TestFourierDivergence)
 {
-  int ncells = grid_spec.number_of_cells();
+  size_t ncells = grid_spec.number_of_cells();
   float *dev_xi = nullptr;
   float *div_epsilon = nullptr;
   cufftComplex *dev_div_epsilon_hat = nullptr;
@@ -182,7 +182,7 @@ TEST_F(FourierTest, TestFourierDivergence)
  */
 TEST_F(FourierTest, TestDivSigma)
 {
-  int ncells = grid_spec.number_of_cells();
+  size_t ncells = grid_spec.number_of_cells();
   // Initialize tau with random numbers
   std::generate(tau, tau + 6 * ncells, [&]()
                 { return distribution(rng); });

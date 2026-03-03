@@ -9,7 +9,6 @@ target_sources(lippmannschwinger
         common.cc
         derivatives.cu        
         fourier.cu
-        profile.cu
         lippmann_schwinger.cu
         
     PUBLIC
@@ -19,7 +18,6 @@ target_sources(lippmannschwinger
             common.hh
             derivatives.hh                        
             fourier.hh
-            profile.hh
             lippmann_schwinger.hh
 )
 

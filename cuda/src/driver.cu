@@ -1,12 +1,11 @@
 #include "common.hh"
 #include "lippmann_schwinger.hh"
-#include "profile.hh"
 
 void initialize_lame_parameters(float *lambda, float *mu, const GridSpec grid_spec)
 {
-  int nx = grid_spec.nx;
-  int ny = grid_spec.nz;
-  int nz = grid_spec.nz;
+  size_t nx = grid_spec.nx;
+  size_t ny = grid_spec.nz;
+  size_t nz = grid_spec.nz;
   float x0 = 0.2;
   float y0 = 0.3;
   float r = 0.1;
@@ -34,7 +33,6 @@ void initialize_lame_parameters(float *lambda, float *mu, const GridSpec grid_sp
 int main()
 {
   // domain size
-  profile_derivatives();
   int cells[3] = {64, 64, 64};
   float extents[3] = {1.0, 1.0, 1.0};
   GridSpec grid_spec;
@@ -44,7 +42,7 @@ int main()
   grid_spec.Lx = extents[0];
   grid_spec.Ly = extents[1];
   grid_spec.Lz = extents[2];
-  int ncells = cells[0] * cells[1] * cells[2];
+  size_t ncells = cells[0] * cells[1] * cells[2];
   float *lambda;
   float *mu;
   float epsilon_bar[6] = {1.1, 0.4, 0.2, 1.5, 0.8, 0.7};

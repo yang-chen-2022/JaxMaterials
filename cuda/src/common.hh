@@ -59,14 +59,14 @@
  * (or voxels) in the different coordinate directions
  */
 struct GridSpec {
-  int nx;   // Number of grid cells in x-direction
-  int ny;   // Number of grid cells in y-direction
-  int nz;   // Number of grid cells in z-direction
-  float Lx; // Size of domain in x-direction
-  float Ly; // Size of domain in y-direction
-  float Lz; // Size of domain in z-direction
+  size_t nx; // Number of grid cells in x-direction
+  size_t ny; // Number of grid cells in y-direction
+  size_t nz; // Number of grid cells in z-direction
+  float Lx;  // Size of domain in x-direction
+  float Ly;  // Size of domain in y-direction
+  float Lz;  // Size of domain in z-direction
   /** @brief Return total number of grid cells */
-  int number_of_cells() const { return nx * ny * nz; }
+  size_t number_of_cells() const { return nx * ny * nz; }
 };
 
 /** @brief Compute relative L2 norm
@@ -78,7 +78,7 @@ struct GridSpec {
  * @param[out] u_ref: reference field to compare to (host pointer)
  * @param[in] ndof number of unknowns
  */
-float relative_difference(float *u, float *u_ref, const int ndof);
+float relative_difference(float *u, float *u_ref, const size_t ndof);
 
 /** @brief Compute norm of real-valued vector field
  *
@@ -95,7 +95,7 @@ float relative_difference(float *u, float *u_ref, const int ndof);
  * @param[in] u vector field, host array of size 3*ncells
  * @param[in] ncells number of cells
  */
-float vector_norm(float *u, const int ncells);
+float vector_norm(float *u, const size_t ncells);
 
 /** @brief Compute norm of complex-valued vector field
  *
@@ -112,7 +112,7 @@ float vector_norm(float *u, const int ncells);
  * @param[in] u vector field, host array of size 3*ncells
  * @param[in] ncells number of cells
  */
-float vector_norm(cufftComplex *u, const int ncells);
+float vector_norm(cufftComplex *u, const size_t ncells);
 
 /** @brief Compute norm of real-valued tensor field in Voigt notation
  *
@@ -131,7 +131,7 @@ float vector_norm(cufftComplex *u, const int ncells);
  * @param[in] u tensor field in Voigt notation, host array of size 6*ncells
  * @param[in] ncells number of cells
  */
-float tensor_norm(float *tau, const int ncells);
+float tensor_norm(float *tau, const size_t ncells);
 
 /** @brief Compute norm of real-valued tensor field in Voigt notation
  *
@@ -150,6 +150,6 @@ float tensor_norm(float *tau, const int ncells);
  * @param[in] u tensor field in Voigt notation, host array of size 6*ncells
  * @param[in] ncells number of cells
  */
-float tensor_norm(cufftComplex *tau, const int ncells);
+float tensor_norm(cufftComplex *tau, const size_t ncells);
 
 #endif // COMMON_HH

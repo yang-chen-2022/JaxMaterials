@@ -31,7 +31,7 @@ protected:
     /* test backward derivative in a particular direction */
     void test_derivative(const int direction)
     {
-        int ncells = grid_spec.number_of_cells();
+        size_t ncells = grid_spec.number_of_cells();
         // allocate host memory
         float *u = nullptr;
         float *du_dx = nullptr;
@@ -69,7 +69,7 @@ protected:
     /* test backward divergence*/
     void test_divergence()
     {
-        int ncells = grid_spec.number_of_cells();
+        size_t ncells = grid_spec.number_of_cells();
         // allocate host memory
         float *sigma = nullptr;
         float *div_sigma = nullptr;

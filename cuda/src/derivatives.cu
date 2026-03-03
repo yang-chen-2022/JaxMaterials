@@ -10,9 +10,9 @@ __global__ void backward_derivative_x_kernel(float *u, float *du_dx,
                                              const GridSpec grid_spec)
 {
   float h_inv = grid_spec.nx / grid_spec.Lx;
-  int nx = grid_spec.nx;
-  int ny = grid_spec.ny;
-  int nz = grid_spec.nz;
+  size_t nx = grid_spec.nx;
+  size_t ny = grid_spec.ny;
+  size_t nz = grid_spec.nz;
   int a = blockDim.x * blockIdx.x + threadIdx.x;
   int b = blockDim.y * blockIdx.y + threadIdx.y;
   int c = blockDim.z * blockIdx.z + threadIdx.z;
@@ -38,9 +38,9 @@ __global__ void backward_derivative_y_kernel(float *u, float *du_dy,
                                              const GridSpec grid_spec)
 {
   float h_inv = grid_spec.ny / grid_spec.Ly;
-  int nx = grid_spec.nx;
-  int ny = grid_spec.ny;
-  int nz = grid_spec.nz;
+  size_t nx = grid_spec.nx;
+  size_t ny = grid_spec.ny;
+  size_t nz = grid_spec.nz;
   int a = blockDim.x * blockIdx.x + threadIdx.x;
   int b = blockDim.y * blockIdx.y + threadIdx.y;
   int c = blockDim.z * blockIdx.z + threadIdx.z;
@@ -66,9 +66,9 @@ __global__ void backward_derivative_z_kernel(float *u, float *du_dz,
                                              const GridSpec grid_spec)
 {
   float h_inv = grid_spec.nz / grid_spec.Lz;
-  int nx = grid_spec.nx;
-  int ny = grid_spec.ny;
-  int nz = grid_spec.nz;
+  size_t nx = grid_spec.nx;
+  size_t ny = grid_spec.ny;
+  size_t nz = grid_spec.nz;
   int a = blockDim.x * blockIdx.x + threadIdx.x;
   int b = blockDim.y * blockIdx.y + threadIdx.y;
   int c = blockDim.z * blockIdx.z + threadIdx.z;
@@ -99,10 +99,10 @@ void backward_derivative_device(float *dev_u, float *dev_du,
                                 const GridSpec grid_spec,
                                 const bool increment)
 {
-  int nx = grid_spec.nx;
-  int ny = grid_spec.ny;
-  int nz = grid_spec.nz;
-  int ncells = grid_spec.number_of_cells();
+  size_t nx = grid_spec.nx;
+  size_t ny = grid_spec.ny;
+  size_t nz = grid_spec.nz;
+  size_t ncells = grid_spec.number_of_cells();
   if (not increment)
     CUDA_CHECK(cudaMemset(dev_du, 0, ncells * sizeof(float)));
   dim3 grid((nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X,
@@ -125,10 +125,10 @@ void backward_derivative_host(float *u, float *du,
                               const GridSpec grid_spec,
                               const bool increment)
 {
-  int nx = grid_spec.nx;
-  int ny = grid_spec.ny;
-  int nz = grid_spec.nz;
-  int ncells = grid_spec.number_of_cells();
+  size_t nx = grid_spec.nx;
+  size_t ny = grid_spec.ny;
+  size_t nz = grid_spec.nz;
+  size_t ncells = grid_spec.number_of_cells();
   if (not(increment))
     std::fill(du, du + ncells, 0);
   if (direction == 0)
@@ -197,7 +197,7 @@ void backward_derivative_host(float *u, float *du,
 void backward_divergence_device(float *dev_sigma, float *dev_div_sigma,
                                 const GridSpec grid_spec)
 {
-  int ncells = grid_spec.number_of_cells();
+  size_t ncells = grid_spec.number_of_cells();
   // Derivatives in x-direction
   backward_derivative_device(dev_sigma + 0 * ncells, dev_div_sigma + 0 * ncells, 0, grid_spec, false);
   backward_derivative_device(dev_sigma + 3 * ncells, dev_div_sigma + 1 * ncells, 0, grid_spec, false);
@@ -219,7 +219,7 @@ void backward_divergence_device(float *dev_sigma, float *dev_div_sigma,
 void backward_divergence_host(float *sigma, float *div_sigma,
                               const GridSpec grid_spec)
 {
-  int ncells = grid_spec.number_of_cells();
+  size_t ncells = grid_spec.number_of_cells();
   // Derivatives in x-direction
   backward_derivative_host(sigma + 0 * ncells, div_sigma + 0 * ncells, 0, grid_spec, false);
   backward_derivative_host(sigma + 3 * ncells, div_sigma + 1 * ncells, 0, grid_spec, false);
