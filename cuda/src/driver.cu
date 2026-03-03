@@ -1,6 +1,12 @@
 #include "common.hh"
 #include "lippmann_schwinger.hh"
 
+/** @brief Initialise Lame parameters for testing
+ *
+ * @param[out] lambda Lame parameter lambda
+ * @param[out] mu Lame parameter mu
+ * @param[in] grid_spec specification of computational grid
+ */
 void initialize_lame_parameters(float *lambda, float *mu, const GridSpec grid_spec)
 {
   size_t nx = grid_spec.nx;
@@ -30,7 +36,8 @@ void initialize_lame_parameters(float *lambda, float *mu, const GridSpec grid_sp
       }
 }
 
-int main()
+/* M A I N */
+int main(int argc, char *argv[])
 {
   // domain size
   int voxels[3] = {64, 64, 64};

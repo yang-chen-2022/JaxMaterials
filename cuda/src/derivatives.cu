@@ -1,5 +1,5 @@
-#include "derivatives.hh"
 /** @brief implementation of derivatives.hh */
+#include "derivatives.hh"
 
 /* ********************************** *
  *    naive CUDA kernels              *

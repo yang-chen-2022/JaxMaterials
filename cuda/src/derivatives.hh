@@ -1,4 +1,7 @@
-/** @brief Computation of derivatives on device and host */
+/** @brief Computation of derivatives on device and host 
+ * 
+ * Provides methods for computing discretised derivatives in real space
+*/
 #ifndef DERIVATIVES_HH
 #define DERIVATIVES_HH DERIVATIVES_HH
 #include <stdexcept>

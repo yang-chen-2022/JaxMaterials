@@ -1,4 +1,4 @@
-/* Implementation of fourier_solve_device.hh */
+/** @brief Implementation of fourier.hh */
 #include "fourier.hh"
 
 /* kernel to initialize Fourier vectors */

@@ -14,7 +14,7 @@ float relative_difference(float *u, float *u_ref, const size_t ndof) {
   return sqrt(diff_nrm2 / nrm2);
 }
 
-/* Compute norm of vector field */
+/* Compute norm of real-valued vector field */
 float vector_norm(float *u, const size_t nvoxels) {
   float nrm2 = 0;
   for (size_t ell = 0; ell < 3 * nvoxels; ++ell) {
@@ -23,7 +23,7 @@ float vector_norm(float *u, const size_t nvoxels) {
   return sqrt(nrm2);
 }
 
-/* Compute norm of vector field */
+/* Compute norm of complex-valued vector field */
 float vector_norm(cufftComplex *u, const size_t nvoxels) {
   float nrm2 = 0;
   for (size_t ell = 0; ell < 3 * nvoxels; ++ell) {
@@ -32,7 +32,7 @@ float vector_norm(cufftComplex *u, const size_t nvoxels) {
   return sqrt(nrm2);
 }
 
-/* Compute norm of tensor field */
+/* Compute norm of real-valued tensor field */
 float tensor_norm(float *tau, const size_t nvoxels) {
   float nrm2 = 0;
   for (size_t ell = 0; ell < nvoxels; ++ell) {
@@ -44,7 +44,7 @@ float tensor_norm(float *tau, const size_t nvoxels) {
   return sqrt(nrm2);
 }
 
-/* Compute norm of tensor field */
+/* Compute norm of complex-valued tensor field */
 float tensor_norm(cufftComplex *tau, const size_t nvoxels) {
   float nrm2 = 0;
   for (int ell = 0; ell < nvoxels; ++ell) {

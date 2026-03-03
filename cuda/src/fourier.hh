@@ -1,9 +1,10 @@
+/** @brief Support for computations in Fourier space */
 #ifndef FOURIER_HH
 #define FOURIER_HH FOURIER_HH
 #include "cufft.h"
 #include "common.hh"
 
-/** @brief Construct Fourier vectors tilde{xi}_j on device
+/** @brief Construct un-normalised Fourier vectors tilde{xi}_j on device
  *
  * The vectors are defined as
  *
@@ -19,7 +20,7 @@
  */
 void initialize_xi_device(float *dev_xi, const GridSpec grid_spec);
 
-/** @brief Construct Fourier vectors ring{tilde{xi}}_j on device
+/** @brief Construct normalised Fourier vectors ring{tilde{xi}}_j on device
  *
  * The vectors are defined as
  *
@@ -40,7 +41,7 @@ void initialize_xi_device(float *dev_xi, const GridSpec grid_spec);
  */
 void initialize_xizero_device(float *dev_xi_zero, const GridSpec grid_spec);
 
-/** @brief Construct Fourier vectors ring{tilde{xi}}_j on host
+/** @brief Construct normalised Fourier vectors ring{tilde{xi}}_j on host
  *
  * Equivalent host implementation of initialize_xizero()
  *

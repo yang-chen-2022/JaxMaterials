@@ -1,3 +1,4 @@
+/** @brief Lippmann Schwinger solver */
 #ifndef LIPPMANN_SCHWINGER_HH
 #define LIPPMANN_SCHWINGER_HH LIPPMANN_SCHWINGER_HH
 
@@ -8,12 +9,20 @@
 #include "derivatives.hh"
 #include "fourier.hh"
 
+/** @brief Class for Lippmann Schwinger solver
+ *
+ * Provides functionality for solving the equations of linear elasticity on a fixed computational
+ * grid.
+ *
+ * The apply routine can be called for different Lame parameters lambda, mu and different mean
+ * strain values.
+ */
 class LippmannSchwingerSolver
 {
 public:
-    /** @brief Constructor create new instance
+    /** @brief Constructor
      *
-     * Initialise all state variables and allocate required memory
+     * Create new instance,;initialise all state variables and allocate required memory
      *
      * @param[in] grid_spec specification of computational grid
      * @param[in] verbose verbosity level: 0 = no output, 1 = print summary, >1 = print at every iteration
@@ -41,9 +50,12 @@ public:
     void compute_stress(float *dev_epsilon, float *dev_sigma,
                         float *dev_lambda, float *dev_mu);
 
-    /** @brief Solve for a given set of Lame parameters
+    /** @brief Solve for a given set of Lame parameters and mean strain
      *
-     * @param[in]
+     * Apply the Lippmann Schwinger iteration for a given set of Lame parameters lambda, mu
+     * and mean strain field bar(epsilon). The equation is solved to a given tolerance on the
+     * normalised divergence, as defined in relative_divergence_norm().
+     *
      * @param[in] lambda Lame parameter lambda (host array, size nvoxels)
      * @param[in] mu Lame parameter mu (host array, size nvoxels)
      * @param[in] epsilon_bar average value of epsilon (host array, size 6)
@@ -74,7 +86,7 @@ public:
 protected:
     /** @brief Increment solution
      *
-     * Increment
+     * Auxilliary function to increment
      *
      *      epsilon -> epsilon + 1/nvoxels * r
      *
@@ -86,8 +98,15 @@ protected:
      */
     void increment_solution(float *dev_epsilon, cufftComplex *dev_increment);
 
-    /* Set the values of epsilon to bar(epsilon) on the device */
-    void set_epsilon_bar(float *dev_epsilon, float *epsilon_bar);
+    /** @brief Set the values of epsilon to bar(epsilon) on the device
+     *
+     * Auxilliary function for setting epsilon to the constant value of bar(epsilon)
+     * on the device.
+     *
+     * @param[out] dev_epsilon strain field to to set (device array of size 6*nvoxels)
+     * @param[in] epsilon_bar constant mean strain field (device array of size 6)
+     */
+    void set_epsilon_bar(float *dev_epsilon, float *dev_epsilon_bar);
 
     /* Class variables */
     /** @brief specification of computational grid */

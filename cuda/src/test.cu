@@ -1,4 +1,4 @@
-
+/** @brief Main test program */
 #include "common.hh"
 #include "tests/test_derivatives.hh"
 #include "tests/test_fourier.hh"

@@ -1,3 +1,4 @@
+/** @brief Test Fourier methods */
 #ifndef TEST_FOURIER_HH
 #define TEST_FOURIER_HH TEST_FOURIER_HH
 #include <random>
@@ -11,11 +12,13 @@
 class FourierTest : public ::testing::Test
 {
 public:
-  /** @Create a new instance */
+  /** @brief Constructor
+   *
+   * Create a new instance */
   FourierTest() {}
 
 protected:
-  /** @brief initialise tests */
+  /** @brief Initialise tests */
   void SetUp() override
   {
     grid_spec.nx = 48;
@@ -24,8 +27,8 @@ protected:
     grid_spec.Lx = 1.1;
     grid_spec.Ly = 0.9;
     grid_spec.Lz = 0.7;
-    // random number generator
     size_t nvoxels = grid_spec.number_of_voxels();
+
     // allocate memory
     CUDA_CHECK(cudaMallocHost(&xi_zero, 3 * nvoxels * sizeof(float)));
     CUDA_CHECK(cudaMallocHost(&tau, 6 * nvoxels * sizeof(float)));

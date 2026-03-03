@@ -1,14 +1,16 @@
+/** @brief Implementation of lippmann_schwinger.hh */
+
 #include "lippmann_schwinger.hh"
 
 /* **** CUDA kernels **** */
 
 /* Kernel for setting the values of epsilon to the constant bar(epsilon) */
-__global__ void set_epsilon_bar_kernel(float *dev_epsilon, float *epsilon_bar, const size_t nvoxels)
+__global__ void set_epsilon_bar_kernel(float *dev_epsilon, float *dev_epsilon_bar, const size_t nvoxels)
 {
   int ell = blockDim.x * blockIdx.x + threadIdx.x;
   if (ell < nvoxels)
     for (int alpha = 0; alpha < 6; ++alpha)
-      dev_epsilon[alpha * nvoxels + ell] = epsilon_bar[alpha];
+      dev_epsilon[alpha * nvoxels + ell] = dev_epsilon_bar[alpha];
 }
 
 /* Kernel for computing stress sigma_{ij} = C_{ijkl} epsilon_{kl} with

@@ -1,4 +1,7 @@
-/** @brief Some common functionality */
+/** @brief Some common functionality
+ *
+ * Provides general definition and auxilliary functions
+ */
 #ifndef COMMON_HH
 #define COMMON_HH COMMON_HH
 
@@ -59,19 +62,25 @@
  * (or voxels) in the different coordinate directions
  */
 struct GridSpec {
-  size_t nx; // Number of grid voxels in x-direction
-  size_t ny; // Number of grid voxels in y-direction
-  size_t nz; // Number of grid voxels in z-direction
-  float Lx;  // Size of domain in x-direction
-  float Ly;  // Size of domain in y-direction
-  float Lz;  // Size of domain in z-direction
-  /** @brief Return total number of grid voxels */
+  /** @brief number of voxels in x-direction */
+  size_t nx;
+  /** @brief number of voxels in y-direction */
+  size_t ny;
+  /** @brief Number of voxels in z-direction */
+  size_t nz;
+  /** @brief extent of domain in x-direction */
+  float Lx;
+  /** @brief extent of domain in y-direction */
+  float Ly;
+  /** @brief extent of domain in z-direction */
+  float Lz;
+  /** @brief Return total number of voxels */
   size_t number_of_voxels() const { return nx * ny * nz; }
 };
 
 /** @brief Compute relative L2 norm
  *
- * Computes ||u-u_{ref}||_2 / ||u_{ref}||_2 which can be used for testing and
+ * returns ||u-u_{ref}||_2 / ||u_{ref}||_2 which can be used for testing and
  * debugging
  *
  * @param[out] u: field (host pointer)
@@ -128,12 +137,12 @@ float vector_norm(cufftComplex *u, const size_t nvoxels);
  *
  * is the norm of the vector field tau_j in a given cell with index j.
  *
- * @param[in] u tensor field in Voigt notation, host array of size 6*nvoxels
+ * @param[in] tau tensor field in Voigt notation, host array of size 6*nvoxels
  * @param[in] nvoxels number of voxels
  */
 float tensor_norm(float *tau, const size_t nvoxels);
 
-/** @brief Compute norm of real-valued tensor field in Voigt notation
+/** @brief Compute norm of complex-valued tensor field in Voigt notation
  *
  * returns the norm
  *
@@ -147,7 +156,7 @@ float tensor_norm(float *tau, const size_t nvoxels);
  *
  * is the norm of the vector field tau_j in a given cell with index j.
  *
- * @param[in] u tensor field in Voigt notation, host array of size 6*nvoxels
+ * @param[in] tau tensor field in Voigt notation, host array of size 6*nvoxels
  * @param[in] nvoxels number of voxels
  */
 float tensor_norm(cufftComplex *tau, const size_t nvoxels);
