@@ -66,7 +66,7 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
 
   /* cuFFT plan */
   cufftHandle plan;
-  int n[3] = {(int)grid_spec.nz, (int)grid_spec.ny, (int)grid_spec.nx};
+  int n[3] = {(int)grid_spec.nx, (int)grid_spec.ny, (int)grid_spec.nz};
   CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, nvoxels, n, 1, nvoxels, CUFFT_C2C, 6));
   CUDA_CHECK(cudaMemset(dev_sigma, 0, 6 * nvoxels * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMemcpy2D(dev_sigma, 2 * sizeof(float), sigma, sizeof(float), sizeof(float), 6 * nvoxels, cudaMemcpyHostToDevice));

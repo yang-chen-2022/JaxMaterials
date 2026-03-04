@@ -116,7 +116,7 @@ LippmannSchwingerSolver::LippmannSchwingerSolver(const GridSpec grid_spec, const
   // Initialise cuBLAS
   CUBLAS_CHECK(cublasCreate(&handle));
   // Set up cuFFT plan
-  int n[3] = {(int)grid_spec.nz, (int)grid_spec.ny, (int)grid_spec.nx};
+  int n[3] = {(int)grid_spec.nx, (int)grid_spec.ny, (int)grid_spec.nz};
   CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, nvoxels, n, 1, nvoxels, CUFFT_C2C, 6));
   CUDA_CHECK(cudaMalloc(&dev_xi_zero, 3 * nvoxels * sizeof(float)));
   CUDA_CHECK(cudaMalloc(&dev_xi, 3 * nvoxels * sizeof(float)));

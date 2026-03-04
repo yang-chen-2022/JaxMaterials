@@ -236,13 +236,11 @@ def lippmann_schwinger_cuda(
     cuda_code.restype = ctypes.c_int
     cells = np.array([grid_spec.nx, grid_spec.ny, grid_spec.nz], dtype=np.int32)
     extents = np.array([grid_spec.Lx, grid_spec.Ly, grid_spec.Lz], dtype=np.float32)
-    epsilon = np.empty((6, grid_spec.nz, grid_spec.ny, grid_spec.nx), dtype=np.float32)
-    sigma = np.empty((6, grid_spec.nz, grid_spec.ny, grid_spec.nx), dtype=np.float32)
-    _mu = mu.transpose(2, 1, 0).copy()
-    _lmbda = lmbda.transpose(2, 1, 0).copy()
+    epsilon = np.empty((6, grid_spec.nx, grid_spec.ny, grid_spec.nz), dtype=np.float32)
+    sigma = np.empty((6, grid_spec.nx, grid_spec.ny, grid_spec.nz), dtype=np.float32)
     iter = cuda_code(
-        np.asarray(_mu),
-        np.asarray(_lmbda),
+        np.asarray(mu),
+        np.asarray(lmbda),
         np.asarray(epsilon_bar, dtype=np.float32),
         np.asarray(epsilon),
         np.asarray(sigma),
@@ -254,7 +252,7 @@ def lippmann_schwinger_cuda(
         verbose,
     )
     return (
-        epsilon.transpose(0, 3, 2, 1).copy(),
-        sigma.transpose(0, 3, 2, 1).copy(),
+        epsilon,
+        sigma,
         iter,
     )

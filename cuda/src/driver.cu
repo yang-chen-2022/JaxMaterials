@@ -16,9 +16,9 @@ void initialize_lame_parameters(float *lambda, float *mu, const GridSpec grid_sp
   float y0 = 0.3;
   float r = 0.1;
 
-  for (int k = 0; k < nz; ++k)
+  for (int i = 0; i < nx; ++i)
     for (int j = 0; j < ny; ++j)
-      for (int i = 0; i < nx; ++i)
+      for (int k = 0; k < nz; ++k)
       {
         float x = grid_spec.Lx * (i + 0.5) / nx;
         float y = grid_spec.Ly * (j + 0.5) / ny;

@@ -46,7 +46,7 @@ protected:
     // Initialise Fourier vectors
     initialize_xizero_host(xi_zero, grid_spec);
     initialize_xizero_device(dev_xi_zero, grid_spec);
-    int n[3] = {(int)grid_spec.nz, (int)grid_spec.ny, (int)grid_spec.nx};
+    int n[3] = {(int)grid_spec.nx, (int)grid_spec.ny, (int)grid_spec.nz};
     CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, nvoxels, n, 1, nvoxels, CUFFT_C2C, 6));
   }
   void TearDown() override

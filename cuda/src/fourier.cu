@@ -11,9 +11,9 @@ __global__ void initialize_xi_kernel(float *__restrict__ dev_xi,
     float two_hx_inv = 2 * grid_spec.nx / grid_spec.Lx;
     float two_hy_inv = 2 * grid_spec.ny / grid_spec.Ly;
     float two_hz_inv = 2 * grid_spec.nz / grid_spec.Lz;
-    int k_a = blockDim.x * blockIdx.x + threadIdx.x;
+    int k_a = blockDim.z * blockIdx.z + threadIdx.z;
     int k_b = blockDim.y * blockIdx.y + threadIdx.y;
-    int k_c = blockDim.z * blockIdx.z + threadIdx.z;
+    int k_c = blockDim.x * blockIdx.x + threadIdx.x;
     if ((k_a < nx) && (k_b < ny) && (k_c < nz))
     {
         float xi_0_half = M_PI * k_a / nx;
@@ -32,9 +32,9 @@ void initialize_xi_device(float *__restrict__ dev_xi,
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
     size_t nz = grid_spec.nz;
-    dim3 grid((nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X,
+    dim3 grid((nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
               (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
-              (nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z);
+              (nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X);
     dim3 block(BLOCKSIZE_X, BLOCKSIZE_Y, BLOCKSIZE_Z);
     initialize_xi_kernel<<<grid, block>>>(dev_xi, grid_spec);
 }
@@ -49,9 +49,9 @@ __global__ void initialize_xizero_kernel(float *__restrict__ dev_xi_zero,
     float two_hx_inv = 2 * grid_spec.nx / grid_spec.Lx;
     float two_hy_inv = 2 * grid_spec.ny / grid_spec.Ly;
     float two_hz_inv = 2 * grid_spec.nz / grid_spec.Lz;
-    int k_a = blockDim.x * blockIdx.x + threadIdx.x;
+    int k_a = blockDim.z * blockIdx.z + threadIdx.z;
     int k_b = blockDim.y * blockIdx.y + threadIdx.y;
-    int k_c = blockDim.z * blockIdx.z + threadIdx.z;
+    int k_c = blockDim.x * blockIdx.x + threadIdx.x;
     if ((k_a < nx) && (k_b < ny) && (k_c < nz))
     {
         float xi_0_half = M_PI * k_a / nx;
@@ -78,10 +78,10 @@ void initialize_xizero_device(float *__restrict__ dev_xi_zero,
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
     size_t nz = grid_spec.nz;
-    dim3 grid((nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X,
+    dim3 grid((nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
               (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
-              (nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z);
-    dim3 block(BLOCKSIZE_X, BLOCKSIZE_Y, BLOCKSIZE_Z);
+              (nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X);
+    dim3 block(BLOCKSIZE_Z, BLOCKSIZE_Y, BLOCKSIZE_X);
     initialize_xizero_kernel<<<grid, block>>>(dev_xi_zero, grid_spec);
 }
 
@@ -95,9 +95,9 @@ void initialize_xizero_host(float *__restrict__ xi_zero,
     float two_hx_inv = 2 * grid_spec.nx / grid_spec.Lx;
     float two_hy_inv = 2 * grid_spec.ny / grid_spec.Ly;
     float two_hz_inv = 2 * grid_spec.nz / grid_spec.Lz;
-    for (int k_c = 0; k_c < nz; ++k_c)
+    for (int k_a = 0; k_a < nx; ++k_a)
         for (int k_b = 0; k_b < ny; ++k_b)
-            for (int k_a = 0; k_a < nx; ++k_a)
+            for (int k_c = 0; k_c < nz; ++k_c)
             {
                 float xi_0_half = M_PI * k_a / nx;
                 float xi_1_half = M_PI * k_b / ny;

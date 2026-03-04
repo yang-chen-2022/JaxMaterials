@@ -14,9 +14,9 @@ __global__ void backward_derivative_x_kernel(float *__restrict__ u,
   size_t nx = grid_spec.nx;
   size_t ny = grid_spec.ny;
   size_t nz = grid_spec.nz;
-  int a = blockDim.x * blockIdx.x + threadIdx.x;
+  int a = blockDim.z * blockIdx.z + threadIdx.z;
   int b = blockDim.y * blockIdx.y + threadIdx.y;
-  int c = blockDim.z * blockIdx.z + threadIdx.z;
+  int c = blockDim.x * blockIdx.x + threadIdx.x;
   if ((a < nx) && (b < ny) && (c < nz))
   {
     float _du_dx = 0;
@@ -43,9 +43,9 @@ __global__ void backward_derivative_y_kernel(float *__restrict__ u,
   size_t nx = grid_spec.nx;
   size_t ny = grid_spec.ny;
   size_t nz = grid_spec.nz;
-  int a = blockDim.x * blockIdx.x + threadIdx.x;
+  int a = blockDim.z * blockIdx.z + threadIdx.z;
   int b = blockDim.y * blockIdx.y + threadIdx.y;
-  int c = blockDim.z * blockIdx.z + threadIdx.z;
+  int c = blockDim.x * blockIdx.x + threadIdx.x;
   if ((a < nx) && (b < ny) && (c < nz))
   {
     float _du_dy = 0;
@@ -72,9 +72,9 @@ __global__ void backward_derivative_z_kernel(float *__restrict__ u,
   size_t nx = grid_spec.nx;
   size_t ny = grid_spec.ny;
   size_t nz = grid_spec.nz;
-  int a = blockDim.x * blockIdx.x + threadIdx.x;
+  int a = blockDim.z * blockIdx.z + threadIdx.z;
   int b = blockDim.y * blockIdx.y + threadIdx.y;
-  int c = blockDim.z * blockIdx.z + threadIdx.z;
+  int c = blockDim.x * blockIdx.x + threadIdx.x;
   if ((a < nx) && (b < ny) && (c < nz))
   {
     float _du_dz = 0;
@@ -109,10 +109,10 @@ void backward_derivative_device(float *__restrict__ dev_u,
   size_t nvoxels = grid_spec.number_of_voxels();
   if (not increment)
     CUDA_CHECK(cudaMemset(dev_du, 0, nvoxels * sizeof(float)));
-  dim3 grid((nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X,
+  dim3 grid((nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
             (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
-            (nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z);
-  dim3 block(BLOCKSIZE_X, BLOCKSIZE_Y, BLOCKSIZE_Z);
+            (nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X);
+  dim3 block(BLOCKSIZE_Z, BLOCKSIZE_Y, BLOCKSIZE_X);
   if (direction == 0)
     backward_derivative_x_kernel<<<grid, block>>>(dev_u, dev_du, grid_spec);
   else if (direction == 1)
@@ -139,9 +139,9 @@ void backward_derivative_host(float *__restrict__ u,
   if (direction == 0)
   {
     float h_inv = grid_spec.nx / grid_spec.Lx;
-    for (int k = 0; k < nz; ++k)
+    for (int i = 0; i < nx; ++i)
       for (int j = 0; j < ny; ++j)
-        for (int i = 0; i < nx; ++i)
+        for (int k = 0; k < nz; ++k)
         {
           float _du_dx = 0;
           _du_dx += u[IDX(nx, ny, nz, i, j, k)];
@@ -159,9 +159,9 @@ void backward_derivative_host(float *__restrict__ u,
   else if (direction == 1)
   {
     float h_inv = grid_spec.ny / grid_spec.Ly;
-    for (int k = 0; k < nz; ++k)
+    for (int i = 0; i < nx; ++i)
       for (int j = 0; j < ny; ++j)
-        for (int i = 0; i < nx; ++i)
+        for (int k = 0; k < nz; ++k)
         {
           float _du_dy = 0;
           _du_dy += u[IDX(nx, ny, nz, i, j, k)];
@@ -178,9 +178,9 @@ void backward_derivative_host(float *__restrict__ u,
   else if (direction == 2)
   {
     float h_inv = grid_spec.nz / grid_spec.Lz;
-    for (int k = 0; k < nz; ++k)
+    for (int i = 0; i < nx; ++i)
       for (int j = 0; j < ny; ++j)
-        for (int i = 0; i < nx; ++i)
+        for (int k = 0; k < nz; ++k)
         {
           float _du_dz = 0;
           _du_dz += u[IDX(nx, ny, nz, i, j, k)];
