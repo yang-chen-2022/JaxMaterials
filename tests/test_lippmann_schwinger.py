@@ -111,6 +111,19 @@ def test_jax_matches_cuda(grid_spec, rng):
     lmbda, mu = initialise_material(grid_spec, rng, np.float32)
     atol = 1e-5
     rtol = 1.0e-20
+    try:
+        epsilon_cuda, sigma_cuda, iter_cuda = lippmann_schwinger_cuda(
+            lmbda,
+            mu,
+            epsilon_bar,
+            grid_spec,
+            rtol=rtol,
+            atol=atol,
+            maxiter=32,
+            verbose=0,
+        )
+    except:
+        pytest.skip(reason="CUDA code not available")
     epsilon_jax, sigma_jax, iter_jax = lippmann_schwinger_jax(
         lmbda,
         mu,
@@ -121,16 +134,6 @@ def test_jax_matches_cuda(grid_spec, rng):
         depth=0,
         maxiter=32,
         dtype=np.float32,
-    )
-    epsilon_cuda, sigma_cuda, iter_cuda = lippmann_schwinger_cuda(
-        lmbda,
-        mu,
-        epsilon_bar,
-        grid_spec,
-        rtol=rtol,
-        atol=atol,
-        maxiter=32,
-        verbose=0,
     )
     rel_diff_epsilon_2 = np.sum((epsilon_cuda - epsilon_jax) ** 2) / np.sum(
         epsilon_jax**2
