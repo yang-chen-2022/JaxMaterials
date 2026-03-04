@@ -59,9 +59,9 @@ void initialize_xizero_host(float *xi_zero, const GridSpec grid_spec);
  * @param[in] dev_xi Fourier vectors (device array, size 3*Nvoxels)
  * @param[in] grid_spec specification of computational grid
  */
-void divergence_fourier(cufftComplex *dev_sigma_hat,
-                        cufftComplex *dev_div_sigma_hat,
-                        float *dev_xi,
+void divergence_fourier(cufftComplex *__restrict__ dev_sigma_hat,
+                        cufftComplex *__restrict__ dev_div_sigma_hat,
+                        float *__restrict__ dev_xi,
                         const GridSpec grid_spec);
 
 /** @brief Solve elasticity equation for homogeneous isotropic reference
@@ -78,8 +78,10 @@ void divergence_fourier(cufftComplex *dev_sigma_hat,
  * @param[in] mu_0 Lame parameter mu_0 of reference material
  * @param[in] grid_spec Grid specification
  */
-void fourier_solve_device(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_hat,
-                          float *dev_xi_zero, const float lambda_0,
+void fourier_solve_device(cufftComplex *__restrict__ dev_tau_hat,
+                          cufftComplex *__restrict__ dev_epsilon_hat,
+                          float *__restrict__ dev_xi_zero,
+                          const float lambda_0,
                           const float mu_0, const GridSpec grid_spec);
 
 #endif // FOURIER_HH

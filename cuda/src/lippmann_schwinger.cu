@@ -5,7 +5,9 @@
 /* **** CUDA kernels **** */
 
 /* Kernel for setting the values of epsilon to the constant bar(epsilon) */
-__global__ void set_epsilon_bar_kernel(float *dev_epsilon, float *dev_epsilon_bar, const size_t nvoxels)
+__global__ void set_epsilon_bar_kernel(float *__restrict__ dev_epsilon,
+                                       float *__restrict__ dev_epsilon_bar,
+                                       const size_t nvoxels)
 {
   int ell = blockDim.x * blockIdx.x + threadIdx.x;
   if (ell < nvoxels)
@@ -17,8 +19,10 @@ __global__ void set_epsilon_bar_kernel(float *dev_epsilon, float *dev_epsilon_ba
  *
  *     C_{ijkl} = lambda*delta_{ij}delta_{kl} + mu*(delta_{ik}delta_{jl}+delta_{il}delta_{jk})
  */
-__global__ void compute_stress_kernel(float *dev_epsilon, float *dev_sigma,
-                                      float *dev_lambda, float *dev_mu,
+__global__ void compute_stress_kernel(float *__restrict__ dev_epsilon,
+                                      float *__restrict__ dev_sigma,
+                                      float *__restrict__ dev_lambda,
+                                      float *__restrict__ dev_mu,
                                       const size_t nvoxels)
 {
   int ell = blockDim.x * blockIdx.x + threadIdx.x;
@@ -41,7 +45,8 @@ __global__ void compute_stress_kernel(float *dev_epsilon, float *dev_sigma,
 }
 
 /* Kernel for incrementing solution epsilon -> epsilon + alpha*r */
-__global__ void increment_solution_kernel(float *dev_epsilon, cufftComplex *dev_r,
+__global__ void increment_solution_kernel(float *__restrict__ dev_epsilon,
+                                          cufftComplex *__restrict__ dev_r,
                                           const float alpha,
                                           const size_t ndof)
 {
@@ -55,7 +60,8 @@ __global__ void increment_solution_kernel(float *dev_epsilon, cufftComplex *dev_
 /* **** class methods **** */
 
 /* Set the values of epsilon to bar(epsilon) on the device */
-void LippmannSchwingerSolver::set_epsilon_bar(float *dev_epsilon, float *epsilon_bar)
+void LippmannSchwingerSolver::set_epsilon_bar(float *__restrict__ dev_epsilon,
+                                              float *__restrict__ epsilon_bar)
 {
   size_t nvoxels = grid_spec.number_of_voxels();
   const size_t nblocks = (nvoxels + BLOCKSIZE - 1) / BLOCKSIZE;
@@ -63,8 +69,10 @@ void LippmannSchwingerSolver::set_epsilon_bar(float *dev_epsilon, float *epsilon
 }
 
 /* Compute stress sigma_{ij} = C_{ijkl} epsilon_{kl} on device */
-void LippmannSchwingerSolver::compute_stress(float *dev_epsilon, float *dev_sigma,
-                                             float *dev_lambda, float *dev_mu)
+void LippmannSchwingerSolver::compute_stress(float *__restrict__ dev_epsilon,
+                                             float *__restrict__ dev_sigma,
+                                             float *__restrict__ dev_lambda,
+                                             float *__restrict__ dev_mu)
 {
   size_t nvoxels = grid_spec.number_of_voxels();
   const size_t nblocks = (nvoxels + BLOCKSIZE - 1) / BLOCKSIZE;
@@ -73,7 +81,8 @@ void LippmannSchwingerSolver::compute_stress(float *dev_epsilon, float *dev_sigm
 }
 
 /* Increment solution epsilon -> epsilon + 1/nvoxels * r */
-void LippmannSchwingerSolver::increment_solution(float *dev_epsilon, cufftComplex *dev_r)
+void LippmannSchwingerSolver::increment_solution(float *__restrict__ dev_epsilon,
+                                                 cufftComplex *__restrict__ dev_r)
 {
   size_t nvoxels = grid_spec.number_of_voxels();
   size_t ndof = 6 * nvoxels;
@@ -83,7 +92,7 @@ void LippmannSchwingerSolver::increment_solution(float *dev_epsilon, cufftComple
 }
 
 /* Compute normalised divergence for stopping criterion in Fourier space */
-float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *dev_sigma_hat)
+float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *__restrict__ dev_sigma_hat)
 {
   // Compute divergence in Fourier space
   divergence_fourier(dev_sigma_hat, dev_div_sigma_hat, dev_xi, grid_spec);

@@ -6,7 +6,8 @@
  * ********************************** */
 
 /* Kernel for backward derivative computation in x-direction */
-__global__ void backward_derivative_x_kernel(float *u, float *du_dx,
+__global__ void backward_derivative_x_kernel(float *__restrict__ u,
+                                             float *__restrict__ du_dx,
                                              const GridSpec grid_spec)
 {
   float h_inv = grid_spec.nx / grid_spec.Lx;
@@ -34,7 +35,8 @@ __global__ void backward_derivative_x_kernel(float *u, float *du_dx,
 }
 
 /* Kernel for backward derivative computation in y-direction */
-__global__ void backward_derivative_y_kernel(float *u, float *du_dy,
+__global__ void backward_derivative_y_kernel(float *__restrict__ u,
+                                             float *__restrict__ du_dy,
                                              const GridSpec grid_spec)
 {
   float h_inv = grid_spec.ny / grid_spec.Ly;
@@ -62,7 +64,8 @@ __global__ void backward_derivative_y_kernel(float *u, float *du_dy,
 }
 
 /* Kernel for backward derivative computation in y-direction */
-__global__ void backward_derivative_z_kernel(float *u, float *du_dz,
+__global__ void backward_derivative_z_kernel(float *__restrict__ u,
+                                             float *__restrict__ du_dz,
                                              const GridSpec grid_spec)
 {
   float h_inv = grid_spec.nz / grid_spec.Lz;
@@ -94,7 +97,8 @@ __global__ void backward_derivative_z_kernel(float *u, float *du_dz,
  * ********************************** */
 
 /* Launch backward derivative computation */
-void backward_derivative_device(float *dev_u, float *dev_du,
+void backward_derivative_device(float *__restrict__ dev_u,
+                                float *__restrict__ dev_du,
                                 const int direction,
                                 const GridSpec grid_spec,
                                 const bool increment)
@@ -120,7 +124,8 @@ void backward_derivative_device(float *dev_u, float *dev_du,
 }
 
 /* Compute backward derivative on host */
-void backward_derivative_host(float *u, float *du,
+void backward_derivative_host(float *__restrict__ u,
+                              float *__restrict__ du,
                               const int direction,
                               const GridSpec grid_spec,
                               const bool increment)
@@ -194,7 +199,8 @@ void backward_derivative_host(float *u, float *du,
 }
 
 /* Compute backward divergence of symmetric tensor on device */
-void backward_divergence_device(float *dev_sigma, float *dev_div_sigma,
+void backward_divergence_device(float *__restrict__ dev_sigma,
+                                float *__restrict__ dev_div_sigma,
                                 const GridSpec grid_spec)
 {
   size_t nvoxels = grid_spec.number_of_voxels();

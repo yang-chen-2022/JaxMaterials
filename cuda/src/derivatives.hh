@@ -1,7 +1,7 @@
-/** @brief Computation of derivatives on device and host 
- * 
+/** @brief Computation of derivatives on device and host
+ *
  * Provides methods for computing discretised derivatives in real space
-*/
+ */
 #ifndef DERIVATIVES_HH
 #define DERIVATIVES_HH DERIVATIVES_HH
 #include <stdexcept>
@@ -31,7 +31,8 @@
  * @param[in] grid_spec grid specification
  * @param[in] increment increment values instead of overwriting them
  */
-void backward_derivative_device(float *u, float *du,
+void backward_derivative_device(float *__restrict__ u,
+                                float *__restrict__ du,
                                 const int direction,
                                 const GridSpec grid_spec,
                                 const bool increment = false);
@@ -60,7 +61,8 @@ void backward_derivative_host(float *u, float *du,
  * @param[out] dev_div_sigma: resulting divergence (device pointer, size 3*nvoxels)
  * @param[in] grid_spec: grid specification
  */
-void backward_divergence_device(float *dev_sigma, float *dev_div_sigma,
+void backward_divergence_device(float *__restrict__ dev_sigma,
+                                float *__restrict__ dev_div_sigma,
                                 const GridSpec grid_spec);
 
 /** @brief Compute backward divergence of symmetric tensor on host

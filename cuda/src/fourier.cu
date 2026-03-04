@@ -2,7 +2,8 @@
 #include "fourier.hh"
 
 /* kernel to initialize Fourier vectors */
-__global__ void initialize_xi_kernel(float *dev_xi, const GridSpec grid_spec)
+__global__ void initialize_xi_kernel(float *__restrict__ dev_xi,
+                                     const GridSpec grid_spec)
 {
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
@@ -25,7 +26,7 @@ __global__ void initialize_xi_kernel(float *dev_xi, const GridSpec grid_spec)
 }
 
 /* Initialize Fourier vectors*/
-void initialize_xi_device(float *dev_xi,
+void initialize_xi_device(float *__restrict__ dev_xi,
                           const GridSpec grid_spec)
 {
     size_t nx = grid_spec.nx;
@@ -39,7 +40,8 @@ void initialize_xi_device(float *dev_xi,
 }
 
 /* kernel to initialize Fourier vectors */
-__global__ void initialize_xizero_kernel(float *dev_xi_zero, const GridSpec grid_spec)
+__global__ void initialize_xizero_kernel(float *__restrict__ dev_xi_zero,
+                                         const GridSpec grid_spec)
 {
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
@@ -70,7 +72,7 @@ __global__ void initialize_xizero_kernel(float *dev_xi_zero, const GridSpec grid
 }
 
 /* Initialize Fourier vectors*/
-void initialize_xizero_device(float *dev_xi_zero,
+void initialize_xizero_device(float *__restrict__ dev_xi_zero,
                               const GridSpec grid_spec)
 {
     size_t nx = grid_spec.nx;
@@ -84,7 +86,7 @@ void initialize_xizero_device(float *dev_xi_zero,
 }
 
 /* kernel to initialize Fourier vectors on host */
-void initialize_xizero_host(float *xi_zero,
+void initialize_xizero_host(float *__restrict__ xi_zero,
                             const GridSpec grid_spec)
 {
     size_t nx = grid_spec.nx;
@@ -115,8 +117,10 @@ void initialize_xizero_host(float *xi_zero,
 }
 
 /* Kernel for computing stress divergence in Fourier space */
-__global__ void divergence_fourier_kernel(cufftComplex *dev_sigma_hat, float *dev_xi,
-                                          cufftComplex *dev_div_sigma_hat, size_t nvoxels)
+__global__ void divergence_fourier_kernel(cufftComplex *__restrict__ dev_sigma_hat,
+                                          float *__restrict__ dev_xi,
+                                          cufftComplex *__restrict__ dev_div_sigma_hat,
+                                          size_t nvoxels)
 {
     int ell = blockDim.x * blockIdx.x + threadIdx.x;
     if (ell < nvoxels)
@@ -141,9 +145,9 @@ __global__ void divergence_fourier_kernel(cufftComplex *dev_sigma_hat, float *de
 }
 
 /* compute divergence in Fourier space */
-void divergence_fourier(cufftComplex *dev_sigma_hat,
-                        cufftComplex *dev_div_sigma_hat,
-                        float *dev_xi,
+void divergence_fourier(cufftComplex *__restrict__ dev_sigma_hat,
+                        cufftComplex *__restrict__ dev_div_sigma_hat,
+                        float *__restrict__ dev_xi,
                         const GridSpec grid_spec)
 {
     size_t nvoxels = grid_spec.number_of_voxels();
@@ -152,8 +156,9 @@ void divergence_fourier(cufftComplex *dev_sigma_hat,
 }
 
 /* kernel for Fourier solve in homogeneous isotropic reference material */
-__global__ void fourier_solve_kernel(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_hat,
-                                     float *dev_xi_zero,
+__global__ void fourier_solve_kernel(cufftComplex *__restrict__ dev_tau_hat,
+                                     cufftComplex *__restrict__ dev_epsilon_hat,
+                                     float *__restrict__ dev_xi_zero,
                                      const float C_A, const float C_B,
                                      const size_t nvoxels)
 {
@@ -206,8 +211,9 @@ __global__ void fourier_solve_kernel(cufftComplex *dev_tau_hat, cufftComplex *de
 }
 
 /* Fourier solve for homogeneous isotropic reference material */
-void fourier_solve_device(cufftComplex *dev_tau_hat, cufftComplex *dev_epsilon_hat,
-                          float *dev_xi_zero,
+void fourier_solve_device(cufftComplex *__restrict__ dev_tau_hat,
+                          cufftComplex *__restrict__ dev_epsilon_hat,
+                          float *__restrict__ dev_xi_zero,
                           const float lambda_0, const float mu_0,
                           const GridSpec grid_spec)
 {

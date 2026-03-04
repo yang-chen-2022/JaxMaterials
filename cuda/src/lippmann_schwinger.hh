@@ -47,8 +47,9 @@ public:
      * @param[in] dev_lambda Lame parameter lambda (device array, size nvoxels)
      * @param[in] dev_mu Lame parameter mu (device array, size nvoxels)
      */
-    void compute_stress(float *dev_epsilon, float *dev_sigma,
-                        float *dev_lambda, float *dev_mu);
+    void compute_stress(float *__restrict__ dev_epsilon,
+                        float *__restrict__ dev_sigma,
+                        float *__restrict__ dev_lambda, float *__restrict__ dev_mu);
 
     /** @brief Solve for a given set of Lame parameters and mean strain
      *
@@ -65,8 +66,11 @@ public:
      * @param[in] atol absolute tolerance on normalised divergence
      * @param[in] maxiter maximum number of iterations
      */
-    int apply(float *lambda, float *mu, float *epsilon_bar,
-              float *epsilon, float *sigma,
+    int apply(float *__restrict__ lambda,
+              float *__restrict__ mu,
+              float *__restrict__ epsilon_bar,
+              float *__restrict__ epsilon,
+              float *__restrict__ sigma,
               float rtol, float atol, int maxiter = 100);
 
     /** @brief Compute normalised divergence for stopping criterion in Fourier space
@@ -81,7 +85,7 @@ public:
      *
      * @param[in] dev_sigma_hat stress in Fourier space
      */
-    float relative_divergence_norm(cufftComplex *dev_sigma_hat);
+    float relative_divergence_norm(cufftComplex *__restrict__ dev_sigma_hat);
 
 protected:
     /** @brief Increment solution
@@ -96,7 +100,8 @@ protected:
      * @param[inout] dev_epsilon solution (device array, size 6*nvoxels)
      * @param[in] dev_increment increment (device array, size 6*nvoxels)
      */
-    void increment_solution(float *dev_epsilon, cufftComplex *dev_increment);
+    void increment_solution(float *__restrict__ dev_epsilon,
+                            cufftComplex *__restrict__ dev_increment);
 
     /** @brief Set the values of epsilon to bar(epsilon) on the device
      *
@@ -106,7 +111,8 @@ protected:
      * @param[out] dev_epsilon strain field to to set (device array of size 6*nvoxels)
      * @param[in] epsilon_bar constant mean strain field (device array of size 6)
      */
-    void set_epsilon_bar(float *dev_epsilon, float *dev_epsilon_bar);
+    void set_epsilon_bar(float *__restrict__ dev_epsilon,
+                         float *__restrict__ dev_epsilon_bar);
 
     /* Class variables */
     /** @brief specification of computational grid */
