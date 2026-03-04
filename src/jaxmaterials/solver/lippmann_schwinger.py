@@ -74,9 +74,17 @@ def relative_divergence_fourier(sigma_hat, xi, grid_spec):
     return dsigma_nrm / sigma_hat_zero_nrm
 
 
-@jax.jit(static_argnames=["grid_spec", "rtol", "atol", "depth", "maxiter"])
+@jax.jit(static_argnames=["grid_spec", "rtol", "atol", "depth", "maxiter", "dtype"])
 def lippmann_schwinger_jax(
-    lmbda, mu, epsilon_bar, grid_spec, rtol=1e-6, atol=1e-20, depth=0, maxiter=32
+    lmbda,
+    mu,
+    epsilon_bar,
+    grid_spec,
+    rtol=1e-6,
+    atol=1e-20,
+    depth=0,
+    maxiter=32,
+    dtype=jnp.float32,
 ):
     """Lippmann Schwinger iteration with Anderson acceleration for linear elasticity
 
@@ -88,25 +96,28 @@ def lippmann_schwinger_jax(
     :arg atol: absolute tolerance on normalised stress divergence to check convergence
     :arg depth: depth of Anderson acceleration
     :arg maxiter: maximal number of iterations
+    :arg dtype: data type
     """
     # reference values of Lame paraeter
     mu0 = 1 / 2 * (jnp.min(mu) + jnp.max(mu))
     lmbda0 = 1 / 2 * (jnp.min(lmbda) + jnp.max(lmbda))
     # Fourier vectors
-    xizero = get_xizero(grid_spec, dtype=epsilon_bar.dtype)
-    xi = get_xi(grid_spec, dtype=epsilon_bar.dtype)
+    xizero = get_xizero(grid_spec, dtype=dtype)
+    xi = get_xi(grid_spec, dtype=dtype)
     # storage for solution and residual, arrays of shape (d+1,6,Nx,Ny,Nz)
     epsilon = jnp.zeros(
         (depth + 1, 6, grid_spec.nx, grid_spec.ny, grid_spec.nz),
-        dtype=epsilon_bar.dtype,
+        dtype=dtype,
     )
-    epsilon = epsilon.at[0, ...].set(jnp.expand_dims(epsilon_bar, [1, 2, 3]))
+    epsilon = epsilon.at[0, ...].set(
+        jnp.expand_dims(jnp.astype(epsilon_bar, dtype), [1, 2, 3])
+    )
     residual = jnp.zeros(
-        (depth + 1, 6, grid_spec.nx, grid_spec.ny, grid_spec.nz), dtype=epsilon.dtype
+        (depth + 1, 6, grid_spec.nx, grid_spec.ny, grid_spec.nz), dtype=dtype
     )
     # Anderson matrix and vectors
-    A_anderson = jnp.eye(depth + 1, dtype=epsilon.dtype)
-    u_rhs = jnp.zeros(depth + 1, dtype=epsilon.dtype)
+    A_anderson = jnp.eye(depth + 1, dtype=dtype)
+    u_rhs = jnp.zeros(depth + 1, dtype=dtype)
     sigma = compute_sigma(lmbda, mu, epsilon[0, ...])
     # Fourier transform sigma
     sigma_hat = jnp.fft.fftn(sigma, axes=[-3, -2, -1])
@@ -137,9 +148,7 @@ def lippmann_schwinger_jax(
         residual = jnp.roll(residual, 1, axis=0)
         residual = residual.at[0, ...].set(r)
         A_anderson = jnp.roll(A_anderson, (1, 1), axis=(0, 1))
-        dotproduct_scaling = jnp.array(
-            [1.0, 1.0, 1.0, 2.0, 2.0, 2.0], dtype=epsilon.dtype
-        )
+        dotproduct_scaling = jnp.array([1.0, 1.0, 1.0, 2.0, 2.0, 2.0], dtype=dtype)
         A_anderson = A_anderson.at[0, :].set(
             jnp.einsum("aijk,saijk,a->s", r, residual, dotproduct_scaling)
         )
@@ -227,11 +236,13 @@ def lippmann_schwinger_cuda(
     cuda_code.restype = ctypes.c_int
     cells = np.array([grid_spec.nx, grid_spec.ny, grid_spec.nz], dtype=np.int32)
     extents = np.array([grid_spec.Lx, grid_spec.Ly, grid_spec.Lz], dtype=np.float32)
-    epsilon = jnp.empty((6, grid_spec.nx, grid_spec.ny, grid_spec.nz), dtype=np.float32)
-    sigma = jnp.empty((6, grid_spec.nx, grid_spec.ny, grid_spec.nz), dtype=np.float32)
+    epsilon = np.empty((6, grid_spec.nz, grid_spec.ny, grid_spec.nx), dtype=np.float32)
+    sigma = np.empty((6, grid_spec.nz, grid_spec.ny, grid_spec.nx), dtype=np.float32)
+    _mu = mu.transpose(2, 1, 0).copy()
+    _lmbda = lmbda.transpose(2, 1, 0).copy()
     iter = cuda_code(
-        np.asarray(mu),
-        np.asarray(lmbda),
+        np.asarray(_mu),
+        np.asarray(_lmbda),
         np.asarray(epsilon_bar, dtype=np.float32),
         np.asarray(epsilon),
         np.asarray(sigma),
@@ -242,4 +253,8 @@ def lippmann_schwinger_cuda(
         maxiter,
         verbose,
     )
-    return epsilon, sigma, iter
+    return (
+        epsilon.transpose(0, 3, 2, 1).copy(),
+        sigma.transpose(0, 3, 2, 1).copy(),
+        iter,
+    )
