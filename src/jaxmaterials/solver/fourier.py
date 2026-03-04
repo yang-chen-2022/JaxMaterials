@@ -6,45 +6,6 @@ from jax import numpy as jnp
 __all__ = ["get_xizero", "get_xi", "fourier_solve"]
 
 
-def get_xizero(grid_spec, dtype=jnp.float64):
-    """Construct the normalised frequency vectors
-
-    Let k = (k_0,k_1,k_2) with k_d = 0,1,...,N_d-1 be a three-dimensional Fourier index.
-
-    The normalised momentum vector is xi_d = 2 pi k_d / N_d, with 0 <= xi_0 < 2pi
-
-    For a given k we then have that
-
-    tilde(xi)_0 = 2/h_0 * sin(xi_0/2) * cos(xi_1/2) * cos(xi_2/2)
-    tilde(xi)_1 = 2/h_1 * cos(xi_0/2) * sin(xi_1/2) * cos(xi_2/2)
-    tilde(xi)_2 = 2/h_2 * cos(xi_0/2) * cos(xi_1/2) * sin(xi_2/2)
-
-    This function returns a tensor of shape (3,N_0,N_1,N_2) which contains
-    the normalised xi^0 = tilde(xi) / ||tilde(xi)|| for all Fourier modes.
-
-     :arg grid_spec: namedtuple with grid specifications
-     :arg dtype: data type
-
-    """
-    # Normalised momentum vectors in all three spatial directions
-    K = [2 * np.pi * np.arange(n) / n for n in grid_spec.N]
-    # Grid with normalised momentum vectors
-    xi = np.meshgrid(*K, indexing="ij")
-    h = np.asarray(grid_spec.L) / np.asarray(grid_spec.N)
-    # Grid with tilde(xi)
-    xi_tilde = np.stack(
-        [
-            2 / h[0] * np.sin(xi[0] / 2) * np.cos(xi[1] / 2) * np.cos(xi[2] / 2),
-            2 / h[1] * np.cos(xi[0] / 2) * np.sin(xi[1] / 2) * np.cos(xi[2] / 2),
-            2 / h[2] * np.cos(xi[0] / 2) * np.cos(xi[1] / 2) * np.sin(xi[2] / 2),
-        ]
-    )
-    # Normalise tilde(xi) to obtain xi^0
-    xi_nrm = np.linalg.norm(xi_tilde, axis=0)
-    xi_nrm[xi_nrm < 1.0e-12] = 1  # avoid division by zero
-    return (xi_tilde / xi_nrm).astype(dtype)
-
-
 def get_xi(grid_spec, dtype=jnp.float64):
     """Construct the un-normalised frequency vectors
 
@@ -66,19 +27,62 @@ def get_xi(grid_spec, dtype=jnp.float64):
 
     """
     # Normalised momentum vectors in all three spatial directions
-    K = [2 * np.pi * np.arange(n) / n for n in grid_spec.N]
+    K = [
+        2 * np.pi * np.arange(n) / n for n in (grid_spec.nx, grid_spec.ny, grid_spec.nz)
+    ]
     # Grid with normalised momentum vectors
     xi = np.meshgrid(*K, indexing="ij")
-    h = np.asarray(grid_spec.L) / np.asarray(grid_spec.N)
     # Grid with tilde(xi)
     xi = np.stack(
         [
-            2 / h[0] * np.sin(xi[0] / 2) * np.cos(xi[1] / 2) * np.cos(xi[2] / 2),
-            2 / h[1] * np.cos(xi[0] / 2) * np.sin(xi[1] / 2) * np.cos(xi[2] / 2),
-            2 / h[2] * np.cos(xi[0] / 2) * np.cos(xi[1] / 2) * np.sin(xi[2] / 2),
+            2
+            * grid_spec.nx
+            / grid_spec.Lx
+            * np.sin(xi[0] / 2)
+            * np.cos(xi[1] / 2)
+            * np.cos(xi[2] / 2),
+            2
+            * grid_spec.ny
+            / grid_spec.Ly
+            * np.cos(xi[0] / 2)
+            * np.sin(xi[1] / 2)
+            * np.cos(xi[2] / 2),
+            2
+            * grid_spec.nz
+            / grid_spec.Lz
+            * np.cos(xi[0] / 2)
+            * np.cos(xi[1] / 2)
+            * np.sin(xi[2] / 2),
         ]
     )
     return xi.astype(dtype)
+
+
+def get_xizero(grid_spec, dtype=jnp.float64):
+    """Construct the normalised frequency vectors
+
+    Let k = (k_0,k_1,k_2) with k_d = 0,1,...,N_d-1 be a three-dimensional Fourier index.
+
+    The normalised momentum vector is xi_d = 2 pi k_d / N_d, with 0 <= xi_0 < 2pi
+
+    For a given k we then have that
+
+    tilde(xi)_0 = 2/h_0 * sin(xi_0/2) * cos(xi_1/2) * cos(xi_2/2)
+    tilde(xi)_1 = 2/h_1 * cos(xi_0/2) * sin(xi_1/2) * cos(xi_2/2)
+    tilde(xi)_2 = 2/h_2 * cos(xi_0/2) * cos(xi_1/2) * sin(xi_2/2)
+
+    This function returns a tensor of shape (3,nx,ny,nz) which contains
+    the normalised xi^0 = tilde(xi) / ||tilde(xi)|| for all Fourier modes.
+
+     :arg grid_spec: namedtuple with grid specifications
+     :arg dtype: data type
+
+    """
+    xi_tilde = get_xi(grid_spec, dtype=dtype)
+    # Normalise tilde(xi) to obtain xi^0
+    xi_nrm = np.linalg.norm(xi_tilde, axis=0)
+    xi_nrm[xi_nrm < 1.0e-12] = 1  # avoid division by zero
+    return (xi_tilde / xi_nrm).astype(dtype)
 
 
 def fourier_solve(tau_hat, lmbda0, mu0, xizero):

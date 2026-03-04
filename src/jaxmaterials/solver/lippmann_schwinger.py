@@ -37,14 +37,13 @@ def relative_divergence(sigma, grid_spec):
     :arg sigma: stress
     :arg grid_spec: grid specification
     """
-    nvoxels = grid_spec.N[0] * grid_spec.N[1] * grid_spec.N[2]
     dsigma = backward_divergence(sigma, grid_spec)
     dsigma_nrm = jnp.sqrt(jnp.sum(dsigma**2))
     sigma_avg = jnp.mean(sigma, axis=[1, 2, 3])
     sigma_avg_nrm = jnp.sqrt(
         jnp.sum(sigma_avg[:3] ** 2) + 2 * jnp.sum(sigma_avg[3:] ** 2)
     )
-    return dsigma_nrm / (jnp.sqrt(nvoxels) * sigma_avg_nrm)
+    return dsigma_nrm / (jnp.sqrt(grid_spec.number_of_voxels) * sigma_avg_nrm)
 
 
 def relative_divergence_fourier(sigma_hat, xi, grid_spec):
@@ -98,11 +97,13 @@ def lippmann_schwinger_jax(
     xi = get_xi(grid_spec, dtype=epsilon_bar.dtype)
     # storage for solution and residual, arrays of shape (d+1,6,Nx,Ny,Nz)
     epsilon = jnp.zeros(
-        (depth + 1, 6) + grid_spec.N,
+        (depth + 1, 6, grid_spec.nx, grid_spec.ny, grid_spec.nz),
         dtype=epsilon_bar.dtype,
     )
     epsilon = epsilon.at[0, ...].set(jnp.expand_dims(epsilon_bar, [1, 2, 3]))
-    residual = jnp.zeros((depth + 1, 6) + grid_spec.N, dtype=epsilon.dtype)
+    residual = jnp.zeros(
+        (depth + 1, 6, grid_spec.nx, grid_spec.ny, grid_spec.nz), dtype=epsilon.dtype
+    )
     # Anderson matrix and vectors
     A_anderson = jnp.eye(depth + 1, dtype=epsilon.dtype)
     u_rhs = jnp.zeros(depth + 1, dtype=epsilon.dtype)
@@ -224,10 +225,10 @@ def lippmann_schwinger_cuda(
         ctypes.c_int,
     ]
     cuda_code.restype = ctypes.c_int
-    cells = np.array(grid_spec.N, dtype=np.int32)
-    extents = np.array(grid_spec.L, dtype=np.float32)
-    epsilon = jnp.empty((6,) + grid_spec.N, dtype=np.float32)
-    sigma = jnp.empty((6,) + grid_spec.N, dtype=np.float32)
+    cells = np.array([grid_spec.nx, grid_spec.ny, grid_spec.nz], dtype=np.int32)
+    extents = np.array([grid_spec.Lx, grid_spec.Ly, grid_spec.Lz], dtype=np.float32)
+    epsilon = jnp.empty((6, grid_spec.nx, grid_spec.ny, grid_spec.nz), dtype=np.float32)
+    sigma = jnp.empty((6, grid_spec.nx, grid_spec.ny, grid_spec.nz), dtype=np.float32)
     iter = cuda_code(
         np.asarray(mu),
         np.asarray(lmbda),

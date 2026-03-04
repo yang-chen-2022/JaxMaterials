@@ -20,12 +20,12 @@ def measure_time(label):
         print(f"time [{label}] = {t_elapsed:8.2f} s")
 
 
-def save_to_vtk(data, domain_size, filename, location="centre"):
+def save_to_vtk(data, grid_spec, filename, location="centre"):
     """Save fields to VTK file
 
     :arg data: dictionary of the form {"label":field} where field is an array of
-               shape (N_x,N_y,N_z)
-    :arg domain_size: extent (L_x,L_y,L_z) of domain
+               shape (nx,ny,nz)
+    :arg grid_spec: Specification of computational grid
     :arg filename: name of file to save to
     :arg location: location of data within voxel. Currently only "centre" is supported
     """
@@ -39,7 +39,9 @@ def save_to_vtk(data, domain_size, filename, location="centre"):
         print("ASCII", file=f)
         print("DATASET RECTILINEAR_GRID", file=f)
         print(f"DIMENSIONS {nx+1} {ny+1} {nz+1}", file=f)
-        for n, extent, dim_label in zip(shape, domain_size, "XYZ"):
+        for n, extent, dim_label in zip(
+            shape, (grid_spec.Lx, grid_spec.Ly, grid_spec.Lz), "XYZ"
+        ):
             print(f"{dim_label}_COORDINATES {n+1} float", file=f)
             print(
                 " ".join([f"{x:12.8f}" for x in np.linspace(0, extent, num=n + 1)]),

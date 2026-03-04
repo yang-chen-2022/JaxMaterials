@@ -14,39 +14,53 @@ def backward_derivative(g, grid_spec, direction):
     """
     if direction == 0:
         dg = (
-            g
-            + jnp.roll(g, 1, axis=-2)
-            + jnp.roll(g, 1, axis=-1)
-            + jnp.roll(g, (1, 1), axis=(-2, -1))
-            - jnp.roll(g, 1, axis=-3)
-            - jnp.roll(g, (1, 1), axis=(-3, -2))
-            - jnp.roll(g, (1, 1), axis=(-3, -1))
-            - jnp.roll(g, (1, 1, 1), axis=(-3, -2, -1))
+            0.25
+            * grid_spec.nx
+            / grid_spec.Lx
+            * (
+                g
+                + jnp.roll(g, 1, axis=-2)
+                + jnp.roll(g, 1, axis=-1)
+                + jnp.roll(g, (1, 1), axis=(-2, -1))
+                - jnp.roll(g, 1, axis=-3)
+                - jnp.roll(g, (1, 1), axis=(-3, -2))
+                - jnp.roll(g, (1, 1), axis=(-3, -1))
+                - jnp.roll(g, (1, 1, 1), axis=(-3, -2, -1))
+            )
         )
     elif direction == 1:
         dg = (
-            g
-            + jnp.roll(g, 1, axis=-3)
-            + jnp.roll(g, 1, axis=-1)
-            + jnp.roll(g, (1, 1), axis=(-3, -1))
-            - jnp.roll(g, 1, axis=-2)
-            - jnp.roll(g, (1, 1), axis=(-3, -2))
-            - jnp.roll(g, (1, 1), axis=(-2, -1))
-            - jnp.roll(g, (1, 1, 1), axis=(-3, -2, -1))
+            0.25
+            * grid_spec.ny
+            / grid_spec.Ly
+            * (
+                g
+                + jnp.roll(g, 1, axis=-3)
+                + jnp.roll(g, 1, axis=-1)
+                + jnp.roll(g, (1, 1), axis=(-3, -1))
+                - jnp.roll(g, 1, axis=-2)
+                - jnp.roll(g, (1, 1), axis=(-3, -2))
+                - jnp.roll(g, (1, 1), axis=(-2, -1))
+                - jnp.roll(g, (1, 1, 1), axis=(-3, -2, -1))
+            )
         )
     elif direction == 2:
         dg = (
-            g
-            + jnp.roll(g, 1, axis=-3)
-            + jnp.roll(g, 1, axis=-2)
-            + jnp.roll(g, (1, 1), axis=(-3, -2))
-            - jnp.roll(g, 1, axis=-1)
-            - jnp.roll(g, (1, 1), axis=(-3, -1))
-            - jnp.roll(g, (1, 1), axis=(-2, -1))
-            - jnp.roll(g, (1, 1, 1), axis=(-3, -2, -1))
+            0.25
+            * grid_spec.nz
+            / grid_spec.Lz
+            * (
+                g
+                + jnp.roll(g, 1, axis=-3)
+                + jnp.roll(g, 1, axis=-2)
+                + jnp.roll(g, (1, 1), axis=(-3, -2))
+                - jnp.roll(g, 1, axis=-1)
+                - jnp.roll(g, (1, 1), axis=(-3, -1))
+                - jnp.roll(g, (1, 1), axis=(-2, -1))
+                - jnp.roll(g, (1, 1, 1), axis=(-3, -2, -1))
+            )
         )
-
-    return 1 / (4 * grid_spec.L[direction] / grid_spec.N[direction]) * dg
+    return dg
 
 
 def backward_divergence(sigma, grid_spec):

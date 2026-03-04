@@ -1,4 +1,3 @@
-from collections import namedtuple
 from jax import numpy as jnp
 import numpy as np
 import torch
@@ -78,8 +77,7 @@ class LayeredFibresDatasetGenerator:
 
     def __init__(
         self,
-        domain_size,
-        number_of_cells,
+        grid_spec,
         nlayers,
         d_void,
         n_samples,
@@ -97,8 +95,7 @@ class LayeredFibresDatasetGenerator:
     ):
         """Initialise instance
 
-        :arg domain_size: size of domain [L_x, L_y, L_z]
-        :arg number_of_cells: number of cells in all direction [N_x, N_y, N_z]
+        :arg grid_spec: specification of computational grid
         :arg radius_distribution: instance of FibreDistribution2d
         :arg n_layers: number of layers with fibres
         :arg d_void: thickness of empty layer at bottom and top of the domain
@@ -114,8 +111,7 @@ class LayeredFibresDatasetGenerator:
         """
         super().__init__()
         # domain
-        self.domain_size = domain_size
-        self.number_of_cells = number_of_cells
+        self.grid_spec = grid_spec
         self.nlayers = nlayers
         self.d_void = d_void
         # number of samples
@@ -137,9 +133,15 @@ class LayeredFibresDatasetGenerator:
 
     def generate(self):
         # Generate data
-        GridSpec = namedtuple("GridSpec", ["N", "L"])
         self._lame_parameters = np.empty(
-            shape=(self.n_samples, 2, *self.number_of_cells), dtype=self.dtype
+            shape=(
+                self.n_samples,
+                2,
+                self.grid_spec.nx,
+                self.grid_spec.ny,
+                self.grid_spec.nz,
+            ),
+            dtype=self.dtype,
         )
         self._sigma_bar = np.empty(shape=(self.n_samples, 6, 6), dtype=self.dtype)
         generator_range = range(self.n_samples)
@@ -155,10 +157,6 @@ class LayeredFibresDatasetGenerator:
                 fibre_positions, fibre_radii, fibre_orientations
             )
 
-            grid_spec = GridSpec(
-                N=tuple(self.number_of_cells),
-                L=tuple(np.asarray(self.domain_size)),
-            )
             mu, lmbda = (
                 self._lame_parameters[j, 0, ...],
                 self._lame_parameters[j, 1, ...],
@@ -167,8 +165,9 @@ class LayeredFibresDatasetGenerator:
                 E_mean = np.zeros(shape=(6,), dtype=self.dtype)
                 E_mean[k] = 1.0
                 rtol = 1.0e-12 if self.dtype == np.float64 else 1.0e-4
+                atol = 1.0e-12 if self.dtype == np.float64 else 1.0e-4
                 epsilon, sigma, iter = lippmann_schwinger_cuda(
-                    lmbda, mu, E_mean, grid_spec, rtol=rtol
+                    lmbda, mu, E_mean, self.grid_spec, rtol=rtol, atol=atol
                 )
                 self._sigma_bar[j, k, :] = jnp.mean(sigma, axis=(1, 2, 3))
 
@@ -191,13 +190,13 @@ class LayeredFibresDatasetGenerator:
         while np.any(layer_depths < 3 * self.radius_distribution.r_max):
             layer_boundaries = np.asarray(
                 sorted(
-                    [self.d_void, self.domain_size[2] - self.d_void]
+                    [self.d_void, self.grid_spec.Lz - self.d_void]
                     + [
                         float(z)
                         for z in self.rng.uniform(
                             size=self.nlayers - 1,
                             low=self.d_void,
-                            high=self.domain_size[2] - self.d_void,
+                            high=self.grid_spec.Lz - self.d_void,
                         )
                     ]
                 )
@@ -207,13 +206,14 @@ class LayeredFibresDatasetGenerator:
         fibre_orientations = []
         fibre_positions = []
         fibre_radii = []
+        domain_size = [self.grid_spec.Lx, self.grid_spec.Ly, self.grid_spec.Lz]
         for k in range(self.nlayers):
             orientation = (k + offset) % 2
             fibre_orientations.append(orientation)
             seed = self.rng.integers(low=0, high=2, size=1)[0]
             fibre_distribution_2d = FibreDistribution2d(
                 domain_size=[
-                    self.domain_size[orientation],
+                    domain_size[orientation],
                     layer_depths[k] - 2 * self.radius_distribution.r_max,
                 ],
                 volume_fraction=self.volume_fraction,
@@ -227,15 +227,15 @@ class LayeredFibresDatasetGenerator:
             )
             upper_boundary_indices = np.greater_equal(
                 X[..., 0],
-                self.domain_size[orientation] - self.radius_distribution.r_max,
+                domain_size[orientation] - self.radius_distribution.r_max,
             )
             X = np.concatenate(
                 [
                     X,
                     X[lower_boundary_indices]
-                    + np.asarray([self.domain_size[orientation], 0]),
+                    + np.asarray([domain_size[orientation], 0]),
                     X[upper_boundary_indices]
-                    - np.asarray([self.domain_size[orientation], 0]),
+                    - np.asarray([domain_size[orientation], 0]),
                 ],
                 axis=0,
             )
@@ -262,15 +262,22 @@ class LayeredFibresDatasetGenerator:
         :arg fibre_radii: list with arrays of fibre radii in each vertical layer
         :arg fibre_orientations: orientations of fibres
         """
-        cell_size = np.asarray(self.domain_size) / np.asarray(self.number_of_cells)
         X, Y, Z = np.meshgrid(
-            *[
-                h * (1 / 2 + np.arange(n))
-                for (n, h) in zip(self.number_of_cells, cell_size)
-            ],
+            self.grid_spec.Lx
+            / self.grid_spec.nx
+            * (1 / 2 + np.arange(self.grid_spec.nx)),
+            self.grid_spec.Ly
+            / self.grid_spec.nz
+            * (1 / 2 + np.arange(self.grid_spec.ny)),
+            self.grid_spec.Lz
+            / self.grid_spec.nz
+            * (1 / 2 + np.arange(self.grid_spec.nz)),
             indexing="ij",
         )
-        data = np.zeros(shape=(2, *self.number_of_cells), dtype=self.dtype)
+        data = np.zeros(
+            shape=(2, self.grid_spec.nx, self.grid_spec.ny, self.grid_spec.nz),
+            dtype=self.dtype,
+        )
         for j, (v_void, v_fibre, v_material) in enumerate(
             zip(
                 [self.mu_void, self.lambda_void],
@@ -280,7 +287,7 @@ class LayeredFibresDatasetGenerator:
         ):
             data[j, ...] = v_material
             data[j, ...] += (
-                (Z < self.d_void) + (Z > self.domain_size[2] - self.d_void)
+                (Z < self.d_void) + (Z > self.grid_spec.Lz - self.d_void)
             ) * (v_void - v_material)
             for fibre_position, fibre_radius, orientation in zip(
                 fibre_positions, fibre_radii, fibre_orientations
@@ -303,11 +310,15 @@ class LayeredFibresDatasetGenerator:
             group = f.create_group("base")
             group.create_dataset("lame_parameters", data=self._lame_parameters)
             group.create_dataset("sigma_bar", data=self._sigma_bar)
-            f.attrs["domain_size"] = self.domain_size
+            f.attrs["domain_size"] = [
+                self.grid_spec.Lx,
+                self.grid_spec.Ly,
+                self.grid_spec.Lz,
+            ]
 
 
 def visualise_fibres(
-    domain_size,
+    grid_spec,
     layer_boundaries,
     fibre_positions,
     fibre_radii,
@@ -319,25 +330,25 @@ def visualise_fibres(
     Generate plot of the projection of the fibres onto the XZ and YZ plane.
     The input is usually created by the generate_fibre_positions() method.
 
-    :arg domain_size: size [L_x, L_y, L_z] of the domain
+    :arg grid_spec: specification of grid
     :arg layer_boundaries: the locations of the boundaries between layers
     :arg fibre_positions: list with arrays of fibre positions in each vertical layer
     :arg fibre_radii: list with arrays of fibre radii in each vertical layer
     :arg fibre_orientations: orientations of fibres
     """
-    horizontal_size = max(domain_size[0], domain_size[1])
+    horizontal_size = max(grid_spec.Lx, grid_spec.Ly)
     layer_depths = layer_boundaries[1:] - layer_boundaries[:-1]
     d_void = layer_boundaries[0]
     plt.clf()
     ax = plt.gca()
     ax.set_xlim(0, horizontal_size)
-    ax.set_ylim(-0.02 / 2, domain_size[2] + 0.02 / 2)
+    ax.set_ylim(-0.02 / 2, grid_spec.Lz + 0.02 / 2)
     ax.set_aspect("equal")
 
     ax.add_patch(
         plt.Rectangle(
             xy=[0, 0],
-            width=domain_size[0],
+            width=grid_spec.Lx,
             height=d_void,
             color="gray",
             linewidth=0,
@@ -345,14 +356,14 @@ def visualise_fibres(
     )
     ax.add_patch(
         plt.Rectangle(
-            xy=[0, domain_size[2] - d_void],
-            width=domain_size[0],
+            xy=[0, grid_spec.Lz - d_void],
+            width=grid_spec.Lx,
             height=d_void,
             color="gray",
             linewidth=0,
         )
     )
-
+    domain_size = [grid_spec.Lx, grid_spec.Ly, grid_spec.Lz]
     for X, R, orientation, depth, boundary in zip(
         fibre_positions,
         fibre_radii,

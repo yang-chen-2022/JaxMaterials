@@ -1,6 +1,7 @@
 """Main script for visualising layered fibre dataset"""
 
 import numpy as np
+from jaxmaterials.common import GridSpec
 from jaxmaterials.data.distributions_fibres import FibreRadiusDistribution
 from jaxmaterials.data.data import (
     LayeredFibresDataset,
@@ -10,10 +11,15 @@ from jaxmaterials.data.data import (
 from jaxmaterials.utilities import save_to_vtk
 
 # Domain
-domain_size = [0.5, 0.5, 0.2]
+Lx = 0.5
+Ly = 0.5
+Lz = 0.2
 d_void = 0.01
 N = 32
-number_of_cells = [5 * N, 5 * N, 2 * N]
+nx = 5 * N
+ny = 5 * N
+nz = 2 * N
+grid_spec = GridSpec(nx, ny, nz, Lx, Ly, Lz)
 
 # Distribution of fibre radii
 r_avg = 7.5e-3
@@ -31,8 +37,7 @@ n_samples = 100
 rng = np.random.default_rng(seed=5713853)
 
 dataset_generator = LayeredFibresDatasetGenerator(
-    domain_size,
-    number_of_cells,
+    grid_spec,
     nlayers,
     d_void,
     n_samples,
@@ -55,7 +60,7 @@ for k in range(8):
         dataset_generator.generate_fibre_positions()
     )
     visualise_fibres(
-        domain_size,
+        grid_spec,
         layer_boundaries,
         fibre_positions,
         fibre_radii,
@@ -74,6 +79,6 @@ for k in range(8):
     data, sigma_bar = dataset[k]
     save_to_vtk(
         {"mu": data[0], "lambda": data[1]},
-        domain_size,
+        grid_spec,
         filename=f"data_{k+1:03d}.vtk",
     )
