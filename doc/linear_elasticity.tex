@@ -268,7 +268,7 @@ This leads to the Lippmann Schwinger iteration shown in \cref{alg:lippmann_schwi
     \State{Compute stress correction $\tau_{ij}=\sigma_{ij}-C^0_{ijk\ell} \varepsilon_{k\ell}$}
     \State{Compute $\widehat{\tau}_{ij} = \mathscr{F}[\tau_{ij}]$}\Comment{Fourier-transform}
     \State{Set $\widehat{\varepsilon}^*_{k\ell} = -\widehat{\Gamma}^0_{k\ell ij} \widehat{\tau}_{ij}$}\Comment{Solve in Fourier space}
-    \State{Update $\varepsilon_{k\ell} = \mathscr{F}^{-1}[\widehat{\varepsilon}^*_{k\ell}]+E\overline{\varepsilon}_{k\ell}$}\Comment{Inverse Fourier-transform}        
+    \State{Update $\varepsilon_{k\ell} = \mathscr{F}^{-1}[\widehat{\varepsilon}^*_{k\ell}]+\overline{\varepsilon}_{k\ell}$}\Comment{Inverse Fourier-transform}        
     \EndFor
 \State{\Return $\varepsilon$}
 \end{algorithmic}
