@@ -101,7 +101,7 @@ protected:
      * @param[in] dev_increment increment (device array, size 6*nvoxels)
      */
     void increment_solution(float *__restrict__ dev_epsilon,
-                            cufftComplex *__restrict__ dev_increment);
+                            float *__restrict__ dev_increment);
 
     /** @brief Set the values of epsilon to bar(epsilon) on the device
      *
@@ -140,13 +140,17 @@ protected:
     /** @brief complex-valued divergence of Fourier-stress on device */
     cufftComplex *dev_div_sigma_hat;
     /** @brief complex-valued residual on device */
-    cufftComplex *dev_residual;
+    float *dev_residual;
+    /** @brief complex-valued residual in Fourier space on device */
+    cufftComplex *dev_residual_hat;
     /** @brief temporary storage for zero mode of sigma in Fourier space */
     cufftComplex *sigma_0;
     /** @brief cuBLAS handle */
     cublasHandle_t handle;
-    /** @brief cuFFT plan */
-    cufftHandle plan;
+    /** @brief cuFFT plan for forward FFT */
+    cufftHandle plan_forward;
+    /** @brief cuFFT plan for inverse FFT */
+    cufftHandle plan_inverse;
 };
 
 /** @brief Solve linear elasticity problem with Lippmann-Schwinger iteration

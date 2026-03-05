@@ -38,12 +38,13 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
   std::normal_distribution<float> distribution;
 
   size_t nvoxels = grid_spec.number_of_voxels();
+  size_t nmodes = grid_spec.number_of_modes();
   cufftComplex *dev_sigma_hat = nullptr;
-  cufftComplex *dev_sigma = nullptr;
+  float *dev_sigma = nullptr;
   float *sigma = nullptr;
   float *div_sigma = nullptr;
-  CUDA_CHECK(cudaMalloc(&dev_sigma, 6 * nvoxels * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_sigma_hat, 6 * nvoxels * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMalloc(&dev_sigma, 6 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_sigma_hat, 6 * nmodes * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMallocHost(&sigma, 6 * nvoxels * sizeof(float)));
   CUDA_CHECK(cudaMallocHost(&div_sigma, 3 * nvoxels * sizeof(float)));
 
@@ -67,14 +68,15 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
   /* cuFFT plan */
   cufftHandle plan;
   int n[3] = {(int)grid_spec.nx, (int)grid_spec.ny, (int)grid_spec.nz};
-  CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, nvoxels, n, 1, nvoxels, CUFFT_C2C, 6));
-  CUDA_CHECK(cudaMemset(dev_sigma, 0, 6 * nvoxels * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMemcpy2D(dev_sigma, 2 * sizeof(float), sigma, sizeof(float), sizeof(float), 6 * nvoxels, cudaMemcpyHostToDevice));
+  int n_fourier[3] = {(int)grid_spec.nx, (int)grid_spec.ny, (int)grid_spec.nz / 2 + 1};
+  CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, nvoxels, n_fourier, 1, nmodes, CUFFT_R2C, 6));
+  CUDA_CHECK(cudaMemcpy(dev_sigma, sigma, 6 * nvoxels * sizeof(float), cudaMemcpyHostToDevice));
   // Fourier transform sigma
-  CUFFT_CHECK(cufftExecC2C(plan, dev_sigma, dev_sigma_hat, CUFFT_FORWARD));
+  CUFFT_CHECK(cufftExecR2C(plan, dev_sigma, dev_sigma_hat));
   CUDA_CHECK(cudaDeviceSynchronize());
 
   float reldiv_fourier = solver.relative_divergence_norm(dev_sigma_hat);
+  printf("rel_div_real = %e rel_div_fourier = %e\n", reldiv_real, reldiv_fourier);
   float rel_diff = (reldiv_fourier - reldiv_real) / reldiv_real;
   // free memory
   CUDA_CHECK(cudaFree(dev_sigma));

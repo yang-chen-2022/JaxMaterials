@@ -46,14 +46,14 @@ __global__ void compute_stress_kernel(float *__restrict__ dev_epsilon,
 
 /* Kernel for incrementing solution epsilon -> epsilon + alpha*r */
 __global__ void increment_solution_kernel(float *__restrict__ dev_epsilon,
-                                          cufftComplex *__restrict__ dev_r,
+                                          float *__restrict__ dev_r,
                                           const float alpha,
                                           const size_t ndof)
 {
   int ell = blockDim.x * blockIdx.x + threadIdx.x;
   if (ell < ndof)
   {
-    dev_epsilon[ell] += alpha * dev_r[ell].x;
+    dev_epsilon[ell] += alpha * dev_r[ell];
   }
 }
 
@@ -82,7 +82,7 @@ void LippmannSchwingerSolver::compute_stress(float *__restrict__ dev_epsilon,
 
 /* Increment solution epsilon -> epsilon + 1/nvoxels * r */
 void LippmannSchwingerSolver::increment_solution(float *__restrict__ dev_epsilon,
-                                                 cufftComplex *__restrict__ dev_r)
+                                                 float *__restrict__ dev_r)
 {
   size_t nvoxels = grid_spec.number_of_voxels();
   size_t ndof = 6 * nvoxels;
@@ -97,13 +97,26 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *__restrict
   // Compute divergence in Fourier space
   divergence_fourier(dev_sigma_hat, dev_div_sigma_hat, dev_xi, grid_spec);
   CUDA_CHECK(cudaDeviceSynchronize());
-  size_t nvoxels = grid_spec.number_of_voxels();
+  size_t nmodes = grid_spec.number_of_modes();
   // STEP 1: Compute nrm_div_sigma =  ||div(sigma)||
-  float nrm_div_sigma = 0;
-  CUBLAS_CHECK(cublasScnrm2(handle, 3 * nvoxels, dev_div_sigma_hat, 1, &nrm_div_sigma));
+  int nx = grid_spec.nx;
+  int ny = grid_spec.ny;
+  int nz = grid_spec.nz;
+
+  float nrm2 = 0;
+  float nrm = 0;
+  CUBLAS_CHECK(cublasScnrm2(handle, 3 * nx * ny, dev_div_sigma_hat, nz / 2 + 1, &nrm));
+  nrm2 += nrm * nrm;
+  for (int k = 1; k < nz / 2 + 1; ++k)
+  {
+    nrm = 0;
+    CUBLAS_CHECK(cublasScnrm2(handle, 3 * nx * ny, dev_div_sigma_hat + k, nz / 2 + 1, &nrm));
+    nrm2 += 2 * nrm * nrm;
+  }
+  float nrm_div_sigma = sqrt(nrm2);
   // STEP 2: compute ||hat(sigma)||
   // Extract zero mode, which is identical to the sum of sigma over the domain, i.e. nvoxels * <sigma>
-  CUDA_CHECK(cudaMemcpy2D(sigma_0, sizeof(cufftComplex), dev_sigma_hat, nvoxels * sizeof(cufftComplex), sizeof(cufftComplex), 6, cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpy2D(sigma_0, sizeof(cufftComplex), dev_sigma_hat, nmodes * sizeof(cufftComplex), sizeof(cufftComplex), 6, cudaMemcpyDeviceToHost));
   // Compute norm of zero mode
   float nrm_sigma = tensor_norm(sigma_0, 1);
   return nrm_div_sigma / nrm_sigma;
@@ -113,11 +126,14 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *__restrict
 LippmannSchwingerSolver::LippmannSchwingerSolver(const GridSpec grid_spec, const int verbose) : grid_spec(grid_spec), verbose(verbose)
 {
   size_t nvoxels = grid_spec.number_of_voxels();
+  size_t nmodes = grid_spec.number_of_modes();
   // Initialise cuBLAS
   CUBLAS_CHECK(cublasCreate(&handle));
-  // Set up cuFFT plan
+  // Set up cuFFT plans
   int n[3] = {(int)grid_spec.nx, (int)grid_spec.ny, (int)grid_spec.nz};
-  CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, nvoxels, n, 1, nvoxels, CUFFT_C2C, 6));
+  int n_fourier[3] = {(int)grid_spec.nx, (int)grid_spec.ny, (int)grid_spec.nz / 2 + 1};
+  CUFFT_CHECK(cufftPlanMany(&plan_forward, 3, n, n, 1, nvoxels, n_fourier, 1, nmodes, CUFFT_R2C, 6));
+  CUFFT_CHECK(cufftPlanMany(&plan_inverse, 3, n, n_fourier, 1, nmodes, n, 1, nvoxels, CUFFT_C2R, 6));
   CUDA_CHECK(cudaMalloc(&dev_xi_zero, 3 * nvoxels * sizeof(float)));
   CUDA_CHECK(cudaMalloc(&dev_xi, 3 * nvoxels * sizeof(float)));
   CUDA_CHECK(cudaMalloc(&dev_lambda, 6 * nvoxels * sizeof(float)));
@@ -125,9 +141,10 @@ LippmannSchwingerSolver::LippmannSchwingerSolver(const GridSpec grid_spec, const
   CUDA_CHECK(cudaMalloc(&dev_epsilon, 6 * nvoxels * sizeof(float)));
   CUDA_CHECK(cudaMalloc(&dev_sigma, 6 * nvoxels * sizeof(float)));
   CUDA_CHECK(cudaMalloc(&dev_div_sigma, 3 * nvoxels * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&dev_div_sigma_hat, 3 * nvoxels * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_sigma_hat, 6 * nvoxels * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMalloc(&dev_residual, 6 * nvoxels * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMalloc(&dev_div_sigma_hat, 3 * nmodes * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMalloc(&dev_sigma_hat, 6 * nmodes * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMalloc(&dev_residual, 6 * nvoxels * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&dev_residual_hat, 6 * nmodes * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMallocHost(&sigma_0, 6 * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMalloc(&dev_epsilon_bar, 6 * sizeof(cufftComplex)));
   // initialize Fourier vectors
@@ -149,6 +166,7 @@ LippmannSchwingerSolver::~LippmannSchwingerSolver()
   CUDA_CHECK(cudaFree(dev_div_sigma));
   CUDA_CHECK(cudaFree(dev_div_sigma_hat));
   CUDA_CHECK(cudaFree(dev_residual));
+  CUDA_CHECK(cudaFree(dev_residual_hat));
   CUDA_CHECK(cudaFree(dev_sigma_hat));
   CUDA_CHECK(cudaFree(dev_epsilon_bar));
   CUDA_CHECK(cudaFreeHost(sigma_0));
@@ -187,9 +205,7 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
     /* ==== STEP 1 ==== Compute stress: sigma_{ij} = C_{ijkl} epsilon_{kl} */
     compute_stress(dev_epsilon, dev_sigma, dev_lambda, dev_mu);
     /* ==== STEP 2 ==== Fourier transform:  hat(sigma) = FFT(sigma)*/
-    CUDA_CHECK(cudaMemset(dev_sigma_hat, 0, 6 * nvoxels * sizeof(cufftComplex)));
-    CUDA_CHECK(cudaMemcpy2D(dev_sigma_hat, 2 * sizeof(float), dev_sigma, sizeof(float), sizeof(float), 6 * nvoxels, cudaMemcpyDeviceToDevice));
-    CUFFT_CHECK(cufftExecC2C(plan, dev_sigma_hat, dev_sigma_hat, CUFFT_FORWARD));
+    CUFFT_CHECK(cufftExecR2C(plan_forward, dev_sigma, dev_sigma_hat));
     CUDA_CHECK(cudaDeviceSynchronize());
     /* ==== STEP 3 ==== Check convergence */
     rel_div_norm = relative_divergence_norm(dev_sigma_hat);
@@ -200,10 +216,10 @@ int LippmannSchwingerSolver::apply(float *lambda, float *mu, float *epsilon_bar,
     if (rel_div_norm < max(rtol * rel_div_norm0, atol))
       break;
     /* ==== STEP 4 ==== Solve in Fourier space: hat(r)_{kl} = -Gamma^{0}_{klij} hat(sigma)_{ij} */
-    fourier_solve_device(dev_sigma_hat, dev_residual, dev_xi_zero, lambda_0, mu_0, grid_spec);
+    fourier_solve_device(dev_sigma_hat, dev_residual_hat, dev_xi_zero, lambda_0, mu_0, grid_spec);
     CUDA_CHECK(cudaDeviceSynchronize());
     /* ==== STEP 5 ==== Inverse Fourier transform: r = FFT^{-1}(hat(r)) */
-    CUFFT_CHECK(cufftExecC2C(plan, dev_residual, dev_residual, CUFFT_INVERSE));
+    CUFFT_CHECK(cufftExecC2R(plan_inverse, dev_residual_hat, dev_residual));
     CUDA_CHECK(cudaDeviceSynchronize());
     /* ==== STEP 6 ==== Update solution: epsilon -> epsilon + r*/
     increment_solution(dev_epsilon, dev_residual);
