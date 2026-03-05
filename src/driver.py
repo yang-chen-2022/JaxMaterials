@@ -3,6 +3,7 @@ import jax
 from jax import numpy as jnp
 
 from jaxmaterials.common import GridSpec
+from jaxmaterials.utilities import save_to_vtk
 from jaxmaterials.utilities import measure_time
 from jaxmaterials.solver.lippmann_schwinger import (
     lippmann_schwinger_jax,
@@ -39,13 +40,13 @@ def initialise_material(grid_spec, fibre_radius=0.2, dtype=jnp.float64):
 
 
 # Domain size in all three spatial direction
-Lx = 1.0
-Ly = 1.0
-Lz = 1.0
+Lx = 1.2
+Ly = 0.8
+Lz = 0.7
 # Number of grid cells in all three spatial directions
-nx = 64
-ny = 64
-nz = 64
+nx = 128
+ny = 128
+nz = 128
 
 dtype = jnp.float32
 rtol = 1e-20
@@ -54,8 +55,8 @@ depth = 0
 
 grid_spec = GridSpec(nx, ny, nz, Lx, Ly, Lz)
 mu, lmbda = initialise_material(grid_spec, dtype=dtype)
-E_mean = jnp.array([1.0, 2.0, 0.0, 0.0, 0.0, 0.0], dtype=dtype)
-
+# E_mean = jnp.array([1.0, 2.0, 0.0, 0.0, 0.0, 0.0])
+E_mean = np.array([2.1, 0.9, 0.8, 0.4, 0.9, 0.5])
 
 with measure_time("evaluation [Jax]"):
     epsilon, sigma, iter = lippmann_schwinger_jax(
@@ -63,9 +64,10 @@ with measure_time("evaluation [Jax]"):
     )
     epsilon.block_until_ready()
 
+
 with measure_time("evaluation [CUDA]"):
     epsilon, sigma, iter = lippmann_schwinger_cuda(
-        lmbda, mu, E_mean, grid_spec, maxiter=32, rtol=rtol, atol=atol, verbose=2
+        lmbda, mu, E_mean, grid_spec, maxiter=32, rtol=rtol, atol=atol, verbose=0
     )
 
 with measure_time("gradient"):

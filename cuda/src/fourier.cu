@@ -120,11 +120,18 @@ void initialize_xizero_host(float *__restrict__ xi_zero,
 __global__ void divergence_fourier_kernel(cufftComplex *__restrict__ dev_sigma_hat,
                                           float *__restrict__ dev_xi,
                                           cufftComplex *__restrict__ dev_div_sigma_hat,
-                                          size_t nvoxels)
+                                          const GridSpec grid_spec)
 {
-    int ell = blockDim.x * blockIdx.x + threadIdx.x;
-    if (ell < nvoxels)
+    size_t nx = grid_spec.nx;
+    size_t ny = grid_spec.ny;
+    size_t nz = grid_spec.nz;
+    size_t nvoxels = nx * ny * nz;
+    int k_a = blockDim.z * blockIdx.z + threadIdx.z;
+    int k_b = blockDim.y * blockIdx.y + threadIdx.y;
+    int k_c = blockDim.x * blockIdx.x + threadIdx.x;
+    if ((k_a < nx) && (k_b < ny) && (k_c < nz))
     {
+        int ell = IDX(nx, ny, nz, k_a, k_b, k_c);
         float xi[3];
         float sigma_hat_x[6];
         float sigma_hat_y[6];
@@ -150,9 +157,14 @@ void divergence_fourier(cufftComplex *__restrict__ dev_sigma_hat,
                         float *__restrict__ dev_xi,
                         const GridSpec grid_spec)
 {
-    size_t nvoxels = grid_spec.number_of_voxels();
-    const size_t nblocks = (nvoxels + BLOCKSIZE - 1) / BLOCKSIZE;
-    divergence_fourier_kernel<<<nblocks, BLOCKSIZE>>>(dev_sigma_hat, dev_xi, dev_div_sigma_hat, nvoxels);
+    size_t nx = grid_spec.nx;
+    size_t ny = grid_spec.ny;
+    size_t nz = grid_spec.nz;
+    dim3 grid((nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
+              (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
+              (nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X);
+    dim3 block(BLOCKSIZE_Z, BLOCKSIZE_Y, BLOCKSIZE_X);
+    divergence_fourier_kernel<<<grid, block>>>(dev_sigma_hat, dev_xi, dev_div_sigma_hat, grid_spec);
 }
 
 /* kernel for Fourier solve in homogeneous isotropic reference material */
@@ -160,14 +172,22 @@ __global__ void fourier_solve_kernel(cufftComplex *__restrict__ dev_tau_hat,
                                      cufftComplex *__restrict__ dev_epsilon_hat,
                                      float *__restrict__ dev_xi_zero,
                                      const float C_A, const float C_B,
-                                     const size_t nvoxels)
+                                     const GridSpec grid_spec)
 {
-    int ell = blockDim.x * blockIdx.x + threadIdx.x;
+
     float xi[3];
     cufftComplex tau_hat[6];
     cufftComplex epsilon_hat[6];
-    if (ell < nvoxels)
+    size_t nx = grid_spec.nx;
+    size_t ny = grid_spec.ny;
+    size_t nz = grid_spec.nz;
+    size_t nvoxels = nx * ny * nz;
+    int k_a = blockDim.z * blockIdx.z + threadIdx.z;
+    int k_b = blockDim.y * blockIdx.y + threadIdx.y;
+    int k_c = blockDim.x * blockIdx.x + threadIdx.x;
+    if ((k_a < nx) && (k_b < ny) && (k_c < nz))
     {
+        int ell = IDX(nx, ny, nz, k_a, k_b, k_c);
         // copy into temporary arrays
         for (int mu = 0; mu < 3; ++mu)
             xi[mu] = dev_xi_zero[mu * nvoxels + ell];
@@ -217,10 +237,16 @@ void fourier_solve_device(cufftComplex *__restrict__ dev_tau_hat,
                           const float lambda_0, const float mu_0,
                           const GridSpec grid_spec)
 {
-    size_t nvoxels = grid_spec.number_of_voxels();
-    const size_t nblocks = (nvoxels + BLOCKSIZE - 1) / BLOCKSIZE;
+
+    size_t nx = grid_spec.nx;
+    size_t ny = grid_spec.ny;
+    size_t nz = grid_spec.nz;
+    dim3 grid((nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
+              (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
+              (nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X);
+    dim3 block(BLOCKSIZE_Z, BLOCKSIZE_Y, BLOCKSIZE_X);
     const float C_A = -1.0 / mu_0;
     const float C_B = (lambda_0 + mu_0) / (mu_0 * (lambda_0 + 2 * mu_0));
-    fourier_solve_kernel<<<nblocks, BLOCKSIZE>>>(dev_tau_hat, dev_epsilon_hat, dev_xi_zero,
-                                                 C_A, C_B, nvoxels);
+    fourier_solve_kernel<<<grid, block>>>(dev_tau_hat, dev_epsilon_hat, dev_xi_zero,
+                                          C_A, C_B, grid_spec);
 }
