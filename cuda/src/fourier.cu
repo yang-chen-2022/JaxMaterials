@@ -8,20 +8,24 @@ __global__ void initialize_xi_kernel(float *__restrict__ dev_xi,
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
     size_t nz = grid_spec.nz;
+    size_t nz_half = nz / 2 + 1;
     float two_hx_inv = 2 * grid_spec.nx / grid_spec.Lx;
     float two_hy_inv = 2 * grid_spec.ny / grid_spec.Ly;
     float two_hz_inv = 2 * grid_spec.nz / grid_spec.Lz;
     int k_a = blockDim.z * blockIdx.z + threadIdx.z;
     int k_b = blockDim.y * blockIdx.y + threadIdx.y;
     int k_c = blockDim.x * blockIdx.x + threadIdx.x;
-    if ((k_a < nx) && (k_b < ny) && (k_c < nz))
+    if ((k_a < nx) && (k_b < ny) && (k_c < nz_half))
     {
         float xi_0_half = M_PI * k_a / nx;
         float xi_1_half = M_PI * k_b / ny;
         float xi_2_half = M_PI * k_c / nz;
-        dev_xi[FIDX(nx, ny, nz, 0, k_a, k_b, k_c)] = two_hx_inv * sin(xi_0_half) * cos(xi_1_half) * cos(xi_2_half);
-        dev_xi[FIDX(nx, ny, nz, 1, k_a, k_b, k_c)] = two_hy_inv * cos(xi_0_half) * sin(xi_1_half) * cos(xi_2_half);
-        dev_xi[FIDX(nx, ny, nz, 2, k_a, k_b, k_c)] = two_hz_inv * cos(xi_0_half) * cos(xi_1_half) * sin(xi_2_half);
+        dev_xi[FIDX(nx, ny, nz_half, 0, k_a, k_b, k_c)] = two_hx_inv *
+                                                          sin(xi_0_half) * cos(xi_1_half) * cos(xi_2_half);
+        dev_xi[FIDX(nx, ny, nz_half, 1, k_a, k_b, k_c)] = two_hy_inv *
+                                                          cos(xi_0_half) * sin(xi_1_half) * cos(xi_2_half);
+        dev_xi[FIDX(nx, ny, nz_half, 2, k_a, k_b, k_c)] = two_hz_inv *
+                                                          cos(xi_0_half) * cos(xi_1_half) * sin(xi_2_half);
     }
 }
 
@@ -32,7 +36,7 @@ void initialize_xi_device(float *__restrict__ dev_xi,
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
     size_t nz = grid_spec.nz;
-    dim3 grid((nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
+    dim3 grid((nz / 2 + 1 + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
               (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
               (nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X);
     dim3 block(BLOCKSIZE_X, BLOCKSIZE_Y, BLOCKSIZE_Z);
@@ -46,13 +50,14 @@ __global__ void initialize_xizero_kernel(float *__restrict__ dev_xi_zero,
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
     size_t nz = grid_spec.nz;
+    size_t nz_half = nz / 2 + 1;
     float two_hx_inv = 2 * grid_spec.nx / grid_spec.Lx;
     float two_hy_inv = 2 * grid_spec.ny / grid_spec.Ly;
     float two_hz_inv = 2 * grid_spec.nz / grid_spec.Lz;
     int k_a = blockDim.z * blockIdx.z + threadIdx.z;
     int k_b = blockDim.y * blockIdx.y + threadIdx.y;
     int k_c = blockDim.x * blockIdx.x + threadIdx.x;
-    if ((k_a < nx) && (k_b < ny) && (k_c < nz))
+    if ((k_a < nx) && (k_b < ny) && (k_c < nz_half))
     {
         float xi_0_half = M_PI * k_a / nx;
         float xi_1_half = M_PI * k_b / ny;
@@ -65,9 +70,9 @@ __global__ void initialize_xizero_kernel(float *__restrict__ dev_xi_zero,
         const float tolerance = 1.E-6;
         if (tilde_xi_nrm < tolerance)
             tilde_xi_nrm = 1.0;
-        dev_xi_zero[FIDX(nx, ny, nz, 0, k_a, k_b, k_c)] = tilde_xi_0 / tilde_xi_nrm;
-        dev_xi_zero[FIDX(nx, ny, nz, 1, k_a, k_b, k_c)] = tilde_xi_1 / tilde_xi_nrm;
-        dev_xi_zero[FIDX(nx, ny, nz, 2, k_a, k_b, k_c)] = tilde_xi_2 / tilde_xi_nrm;
+        dev_xi_zero[FIDX(nx, ny, nz_half, 0, k_a, k_b, k_c)] = tilde_xi_0 / tilde_xi_nrm;
+        dev_xi_zero[FIDX(nx, ny, nz_half, 1, k_a, k_b, k_c)] = tilde_xi_1 / tilde_xi_nrm;
+        dev_xi_zero[FIDX(nx, ny, nz_half, 2, k_a, k_b, k_c)] = tilde_xi_2 / tilde_xi_nrm;
     }
 }
 
@@ -78,7 +83,7 @@ void initialize_xizero_device(float *__restrict__ dev_xi_zero,
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
     size_t nz = grid_spec.nz;
-    dim3 grid((nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
+    dim3 grid((nz / 2 + 1 + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
               (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
               (nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X);
     dim3 block(BLOCKSIZE_Z, BLOCKSIZE_Y, BLOCKSIZE_X);
@@ -92,12 +97,13 @@ void initialize_xizero_host(float *__restrict__ xi_zero,
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
     size_t nz = grid_spec.nz;
+    size_t nz_half = nz / 2 + 1;
     float two_hx_inv = 2 * grid_spec.nx / grid_spec.Lx;
     float two_hy_inv = 2 * grid_spec.ny / grid_spec.Ly;
     float two_hz_inv = 2 * grid_spec.nz / grid_spec.Lz;
     for (int k_a = 0; k_a < nx; ++k_a)
         for (int k_b = 0; k_b < ny; ++k_b)
-            for (int k_c = 0; k_c < nz; ++k_c)
+            for (int k_c = 0; k_c < nz_half; ++k_c)
             {
                 float xi_0_half = M_PI * k_a / nx;
                 float xi_1_half = M_PI * k_b / ny;
@@ -110,9 +116,9 @@ void initialize_xizero_host(float *__restrict__ xi_zero,
                 const float tolerance = 1.E-6;
                 if (tilde_xi_nrm < tolerance)
                     tilde_xi_nrm = 1.0;
-                xi_zero[FIDX(nx, ny, nz, 0, k_a, k_b, k_c)] = tilde_xi_0 / tilde_xi_nrm;
-                xi_zero[FIDX(nx, ny, nz, 1, k_a, k_b, k_c)] = tilde_xi_1 / tilde_xi_nrm;
-                xi_zero[FIDX(nx, ny, nz, 2, k_a, k_b, k_c)] = tilde_xi_2 / tilde_xi_nrm;
+                xi_zero[FIDX(nx, ny, nz_half, 0, k_a, k_b, k_c)] = tilde_xi_0 / tilde_xi_nrm;
+                xi_zero[FIDX(nx, ny, nz_half, 1, k_a, k_b, k_c)] = tilde_xi_1 / tilde_xi_nrm;
+                xi_zero[FIDX(nx, ny, nz_half, 2, k_a, k_b, k_c)] = tilde_xi_2 / tilde_xi_nrm;
             }
 }
 
@@ -125,29 +131,40 @@ __global__ void divergence_fourier_kernel(cufftComplex *__restrict__ dev_sigma_h
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
     size_t nz = grid_spec.nz;
-    size_t nvoxels = nx * ny * nz;
+    size_t nz_half = nz / 2 + 1;
     int k_a = blockDim.z * blockIdx.z + threadIdx.z;
     int k_b = blockDim.y * blockIdx.y + threadIdx.y;
     int k_c = blockDim.x * blockIdx.x + threadIdx.x;
-    if ((k_a < nx) && (k_b < ny) && (k_c < nz))
+    if ((k_a < nx) && (k_b < ny) && (k_c < nz_half))
     {
-        int ell = IDX(nx, ny, nz, k_a, k_b, k_c);
         float xi[3];
         float sigma_hat_x[6];
         float sigma_hat_y[6];
         for (int alpha = 0; alpha < 3; ++alpha)
-            xi[alpha] = dev_xi[alpha * nvoxels + ell];
+            xi[alpha] = dev_xi[FIDX(nx, ny, nz_half, alpha, k_a, k_b, k_c)];
         for (int alpha = 0; alpha < 6; ++alpha)
         {
-            sigma_hat_x[alpha] = dev_sigma_hat[alpha * nvoxels + ell].x;
-            sigma_hat_y[alpha] = dev_sigma_hat[alpha * nvoxels + ell].y;
+            sigma_hat_x[alpha] = dev_sigma_hat[FIDX(nx, ny, nz_half, alpha, k_a, k_b, k_c)].x;
+            sigma_hat_y[alpha] = dev_sigma_hat[FIDX(nx, ny, nz_half, alpha, k_a, k_b, k_c)].y;
         }
-        dev_div_sigma_hat[0 * nvoxels + ell].x = xi[0] * sigma_hat_x[0] + xi[1] * sigma_hat_x[3] + xi[2] * sigma_hat_x[4];
-        dev_div_sigma_hat[0 * nvoxels + ell].y = xi[0] * sigma_hat_y[0] + xi[1] * sigma_hat_y[3] + xi[2] * sigma_hat_y[4];
-        dev_div_sigma_hat[1 * nvoxels + ell].x = xi[0] * sigma_hat_x[3] + xi[1] * sigma_hat_x[1] + xi[2] * sigma_hat_x[5];
-        dev_div_sigma_hat[1 * nvoxels + ell].y = xi[0] * sigma_hat_y[3] + xi[1] * sigma_hat_y[1] + xi[2] * sigma_hat_y[5];
-        dev_div_sigma_hat[2 * nvoxels + ell].x = xi[0] * sigma_hat_x[4] + xi[1] * sigma_hat_x[5] + xi[2] * sigma_hat_x[2];
-        dev_div_sigma_hat[2 * nvoxels + ell].y = xi[0] * sigma_hat_y[4] + xi[1] * sigma_hat_y[5] + xi[2] * sigma_hat_y[2];
+        dev_div_sigma_hat[FIDX(nx, ny, nz_half, 0, k_a, k_b, k_c)].x = xi[0] * sigma_hat_x[0] +
+                                                                       xi[1] * sigma_hat_x[3] +
+                                                                       xi[2] * sigma_hat_x[4];
+        dev_div_sigma_hat[FIDX(nx, ny, nz_half, 0, k_a, k_b, k_c)].y = xi[0] * sigma_hat_y[0] +
+                                                                       xi[1] * sigma_hat_y[3] +
+                                                                       xi[2] * sigma_hat_y[4];
+        dev_div_sigma_hat[FIDX(nx, ny, nz_half, 1, k_a, k_b, k_c)].x = xi[0] * sigma_hat_x[3] +
+                                                                       xi[1] * sigma_hat_x[1] +
+                                                                       xi[2] * sigma_hat_x[5];
+        dev_div_sigma_hat[FIDX(nx, ny, nz_half, 1, k_a, k_b, k_c)].y = xi[0] * sigma_hat_y[3] +
+                                                                       xi[1] * sigma_hat_y[1] +
+                                                                       xi[2] * sigma_hat_y[5];
+        dev_div_sigma_hat[FIDX(nx, ny, nz_half, 2, k_a, k_b, k_c)].x = xi[0] * sigma_hat_x[4] +
+                                                                       xi[1] * sigma_hat_x[5] +
+                                                                       xi[2] * sigma_hat_x[2];
+        dev_div_sigma_hat[FIDX(nx, ny, nz_half, 2, k_a, k_b, k_c)].y = xi[0] * sigma_hat_y[4] +
+                                                                       xi[1] * sigma_hat_y[5] +
+                                                                       xi[2] * sigma_hat_y[2];
     }
 }
 
@@ -160,7 +177,7 @@ void divergence_fourier(cufftComplex *__restrict__ dev_sigma_hat,
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
     size_t nz = grid_spec.nz;
-    dim3 grid((nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
+    dim3 grid((nz / 2 + 1 + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
               (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
               (nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X);
     dim3 block(BLOCKSIZE_Z, BLOCKSIZE_Y, BLOCKSIZE_X);
@@ -181,18 +198,17 @@ __global__ void fourier_solve_kernel(cufftComplex *__restrict__ dev_tau_hat,
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
     size_t nz = grid_spec.nz;
-    size_t nvoxels = nx * ny * nz;
+    size_t nz_half = nz / 2 + 1;
     int k_a = blockDim.z * blockIdx.z + threadIdx.z;
     int k_b = blockDim.y * blockIdx.y + threadIdx.y;
     int k_c = blockDim.x * blockIdx.x + threadIdx.x;
-    if ((k_a < nx) && (k_b < ny) && (k_c < nz))
+    if ((k_a < nx) && (k_b < ny) && (k_c < nz_half))
     {
-        int ell = IDX(nx, ny, nz, k_a, k_b, k_c);
         // copy into temporary arrays
         for (int mu = 0; mu < 3; ++mu)
-            xi[mu] = dev_xi_zero[mu * nvoxels + ell];
+            xi[mu] = dev_xi_zero[FIDX(nx, ny, nz_half, mu, k_a, k_b, k_c)];
         for (int mu = 0; mu < 6; ++mu)
-            tau_hat[mu] = dev_tau_hat[mu * nvoxels + ell];
+            tau_hat[mu] = dev_tau_hat[FIDX(nx, ny, nz_half, mu, k_a, k_b, k_c)];
         cufftComplex rho;
         rho.x = xi[0] * xi[0] * tau_hat[0].x +
                 xi[1] * xi[1] * tau_hat[1].x +
@@ -226,7 +242,7 @@ __global__ void fourier_solve_kernel(cufftComplex *__restrict__ dev_tau_hat,
         epsilon_hat[5].y = 0.5 * C_A * (xi[1] * xi[2] * (tau_hat[1].y + tau_hat[2].y) + (xi[1] * xi[1] + xi[2] * xi[2]) * tau_hat[5].y + xi[0] * (xi[1] * tau_hat[4].y + xi[2] * tau_hat[3].y)) + C_B * rho.y * xi[1] * xi[2];
         // copy back into solution vector
         for (int mu = 0; mu < 6; ++mu)
-            dev_epsilon_hat[mu * nvoxels + ell] = epsilon_hat[mu];
+            dev_epsilon_hat[FIDX(nx, ny, nz_half, mu, k_a, k_b, k_c)] = epsilon_hat[mu];
     }
 }
 
@@ -241,7 +257,7 @@ void fourier_solve_device(cufftComplex *__restrict__ dev_tau_hat,
     size_t nx = grid_spec.nx;
     size_t ny = grid_spec.ny;
     size_t nz = grid_spec.nz;
-    dim3 grid((nz + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
+    dim3 grid((nz / 2 + 1 + BLOCKSIZE_Z - 1) / BLOCKSIZE_Z,
               (ny + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y,
               (nx + BLOCKSIZE_X - 1) / BLOCKSIZE_X);
     dim3 block(BLOCKSIZE_Z, BLOCKSIZE_Y, BLOCKSIZE_X);

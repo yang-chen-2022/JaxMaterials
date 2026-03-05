@@ -83,6 +83,8 @@ struct GridSpec
   float Lz;
   /** @brief Return total number of voxels */
   size_t number_of_voxels() const { return nx * ny * nz; }
+  /** @brief Return total number of Fourier modes */
+  size_t number_of_modes() const { return nx * ny * (nz / 2 + 1); }
 };
 
 /** @brief Compute relative L2 norm

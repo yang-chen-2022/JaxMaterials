@@ -28,38 +28,41 @@ protected:
     grid_spec.Ly = 0.9;
     grid_spec.Lz = 0.7;
     size_t nvoxels = grid_spec.number_of_voxels();
+    size_t nmodes = grid_spec.number_of_modes();
 
     // allocate memory
     CUDA_CHECK(cudaMallocHost(&xi_zero, 3 * nvoxels * sizeof(float)));
     CUDA_CHECK(cudaMallocHost(&tau, 6 * nvoxels * sizeof(float)));
-    CUDA_CHECK(cudaMallocHost(&tau_hat, 6 * nvoxels * sizeof(cufftComplex)));
-    CUDA_CHECK(cudaMallocHost(&epsilon_hat, 6 * nvoxels * sizeof(cufftComplex)));
+    CUDA_CHECK(cudaMallocHost(&tau_hat, 6 * nmodes * sizeof(cufftComplex)));
+    CUDA_CHECK(cudaMallocHost(&epsilon_hat, 6 * nmodes * sizeof(cufftComplex)));
     CUDA_CHECK(cudaMallocHost(&epsilon, 6 * nvoxels * sizeof(float)));
     CUDA_CHECK(cudaMallocHost(&sigma, 6 * nvoxels * sizeof(float)));
     CUDA_CHECK(cudaMallocHost(&div_sigma, 6 * nvoxels * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&dev_xi_zero, 3 * nvoxels * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&dev_tau, 6 * nvoxels * sizeof(cufftComplex)));
-    CUDA_CHECK(cudaMalloc(&dev_tau_hat, 6 * nvoxels * sizeof(cufftComplex)));
-    CUDA_CHECK(cudaMalloc(&dev_epsilon_hat, 6 * nvoxels * sizeof(cufftComplex)));
-    CUDA_CHECK(cudaMalloc(&dev_epsilon, 6 * nvoxels * sizeof(cufftComplex)));
+    CUDA_CHECK(cudaMalloc(&dev_tau, 6 * nvoxels * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&dev_tau_hat, 6 * nmodes * sizeof(cufftComplex)));
+    CUDA_CHECK(cudaMalloc(&dev_epsilon_hat, 6 * nmodes * sizeof(cufftComplex)));
+    CUDA_CHECK(cudaMalloc(&dev_epsilon, 6 * nvoxels * sizeof(float)));
 
     // Initialise Fourier vectors
     initialize_xizero_host(xi_zero, grid_spec);
     initialize_xizero_device(dev_xi_zero, grid_spec);
     int n[3] = {(int)grid_spec.nx, (int)grid_spec.ny, (int)grid_spec.nz};
-    CUFFT_CHECK(cufftPlanMany(&plan, 3, n, n, 1, nvoxels, n, 1, nvoxels, CUFFT_C2C, 6));
+    int n_fourier[3] = {(int)grid_spec.nx, (int)grid_spec.ny, (int)grid_spec.nz / 2 + 1};
+    CUFFT_CHECK(cufftPlanMany(&plan_forward, 3, n, n, 1, nvoxels, n_fourier, 1, nmodes, CUFFT_R2C, 6));
+    CUFFT_CHECK(cufftPlanMany(&plan_inverse, 3, n, n_fourier, 1, nmodes, n, 1, nvoxels, CUFFT_C2R, 6));
   }
   void TearDown() override
   {
     // free memory
     CUDA_CHECK(cudaFree(dev_xi_zero));
     CUDA_CHECK(cudaFree(dev_tau_hat));
-    CUDA_CHECK(cudaFreeHost(tau_hat));
     CUDA_CHECK(cudaFree(dev_tau));
     CUDA_CHECK(cudaFree(dev_epsilon_hat));
     CUDA_CHECK(cudaFree(dev_epsilon));
     CUDA_CHECK(cudaFreeHost(xi_zero));
     CUDA_CHECK(cudaFreeHost(tau));
+    CUDA_CHECK(cudaFreeHost(tau_hat));
     CUDA_CHECK(cudaFreeHost(epsilon_hat));
     CUDA_CHECK(cudaFreeHost(epsilon));
     CUDA_CHECK(cudaFreeHost(sigma));
@@ -77,7 +80,7 @@ protected:
   /* right hand side tau on host */
   float *tau;
   /* right hand side tau on host */
-  cufftComplex *dev_tau;
+  float *dev_tau;
   /* right hand side tau on device */
   cufftComplex *dev_tau_hat;
   /* Fourier-transform of tau */
@@ -85,7 +88,7 @@ protected:
   /* Fourier transform of strain tensor on device */
   cufftComplex *dev_epsilon_hat;
   /* train tensor on device */
-  cufftComplex *dev_epsilon;
+  float *dev_epsilon;
   /* Fourier transform of strain tensor on host */
   cufftComplex *epsilon_hat;
   /* Strain tensor on host */
@@ -98,8 +101,9 @@ protected:
   std::default_random_engine rng;
   /* normal distribution */
   std::normal_distribution<float> distribution;
-  /* cuFFT plan */
-  cufftHandle plan;
+  /* cuFFT plans */
+  cufftHandle plan_forward;
+  cufftHandle plan_inverse;
 };
 
 /** @brief Check whether xi-zero is constructed consistently on device and host
@@ -130,14 +134,17 @@ TEST_F(FourierTest, TestXiZero)
 TEST_F(FourierTest, TestFourierDivergence)
 {
   size_t nvoxels = grid_spec.number_of_voxels();
+  size_t nmodes = grid_spec.number_of_modes();
   float *dev_xi = nullptr;
   float *div_epsilon = nullptr;
   cufftComplex *dev_div_epsilon_hat = nullptr;
   cufftComplex *div_epsilon_hat = nullptr;
+  cufftComplex *div_epsilon_hat_full = nullptr;
   CUDA_CHECK(cudaMalloc(&dev_xi, 3 * nvoxels * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&dev_div_epsilon_hat, 3 * nvoxels * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMalloc(&dev_div_epsilon_hat, 3 * nmodes * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMallocHost(&div_epsilon, 3 * nvoxels * sizeof(float)));
-  CUDA_CHECK(cudaMallocHost(&div_epsilon_hat, 3 * nvoxels * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMallocHost(&div_epsilon_hat, 3 * nmodes * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMallocHost(&div_epsilon_hat_full, 3 * nvoxels * sizeof(cufftComplex)));
 
   // Initialize epsilon with random numbers
   std::generate(epsilon, epsilon + 6 * nvoxels, [&]()
@@ -146,11 +153,10 @@ TEST_F(FourierTest, TestFourierDivergence)
   // compute divergence of epsilon in real space
   backward_divergence_host(epsilon, div_epsilon, grid_spec);
 
-  CUDA_CHECK(cudaMemset(dev_epsilon, 0, 6 * nvoxels * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMemcpy2D(dev_epsilon, 2 * sizeof(float), epsilon, sizeof(float), sizeof(float), 6 * nvoxels, cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(dev_epsilon, epsilon, 6 * nvoxels * sizeof(float), cudaMemcpyHostToDevice));
 
   // Fourier transform epsilon
-  CUFFT_CHECK(cufftExecC2C(plan, dev_epsilon, dev_epsilon_hat, CUFFT_FORWARD));
+  CUFFT_CHECK(cufftExecR2C(plan_forward, dev_epsilon, dev_epsilon_hat));
   CUDA_CHECK(cudaDeviceSynchronize());
 
   // compute divergence of hat(epsilon) in Fourier space on device
@@ -158,15 +164,42 @@ TEST_F(FourierTest, TestFourierDivergence)
   divergence_fourier(dev_epsilon_hat, dev_div_epsilon_hat, dev_xi, grid_spec);
   cudaDeviceSynchronize();
   // Copy back to host
-  CUDA_CHECK(cudaMemcpy(div_epsilon_hat, dev_div_epsilon_hat, 3 * nvoxels * sizeof(cufftComplex), cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpy(div_epsilon_hat, dev_div_epsilon_hat, 3 * nmodes * sizeof(cufftComplex), cudaMemcpyDeviceToHost));
+
+  // Copy 'half' Fourier array to 'full' Fourier array
+  size_t nx = grid_spec.nx;
+  size_t ny = grid_spec.ny;
+  size_t nz = grid_spec.nz;
+  for (int alpha = 0; alpha < 3; ++alpha)
+  {
+    for (int i = 0; i < nx; ++i)
+    {
+      for (int j = 0; j < ny; ++j)
+      {
+        div_epsilon_hat_full[FIDX(nx, ny, nz, alpha, i, j, 0)].x = div_epsilon_hat[FIDX(nx, ny, nz / 2 + 1, alpha, i, j, 0)].x;
+        div_epsilon_hat_full[FIDX(nx, ny, nz, alpha, i, j, 0)].y = div_epsilon_hat[FIDX(nx, ny, nz / 2 + 1, alpha, i, j, 0)].y;
+        for (int k = 1; k < nz / 2 + 1; ++k)
+        {
+          cufftComplex z{div_epsilon_hat[FIDX(nx, ny, nz / 2 + 1, alpha, i, j, k)].x,
+                         div_epsilon_hat[FIDX(nx, ny, nz / 2 + 1, alpha, i, j, k)].y};
+          div_epsilon_hat_full[FIDX(nx, ny, nz, alpha, i, j, k)].x = z.x;
+          div_epsilon_hat_full[FIDX(nx, ny, nz, alpha, i, j, k)].y = z.y;
+          div_epsilon_hat_full[FIDX(nx, ny, nz, alpha, i, j, nz - k)].x = z.x;
+          div_epsilon_hat_full[FIDX(nx, ny, nz, alpha, i, j, nz - k)].y = -z.y;
+        }
+      }
+    }
+  }
+
   // Compute norms ||D(epsilon)|| and ||xi.hat(epsilon)||
   float norm_real = vector_norm(div_epsilon, nvoxels);
-  float norm_fourier = vector_norm(div_epsilon_hat, nvoxels) / sqrt(nvoxels);
+  float norm_fourier = vector_norm(div_epsilon_hat_full, nvoxels) / sqrt(nvoxels);
   float rel_diff = (norm_fourier - norm_real) / norm_real;
   // Free memory
   CUDA_CHECK(cudaFreeHost(div_epsilon));
   CUDA_CHECK(cudaFree(dev_xi));
   CUDA_CHECK(cudaFree(dev_div_epsilon_hat));
+  CUDA_CHECK(cudaFreeHost(div_epsilon_hat_full));
   CUDA_CHECK(cudaFreeHost(div_epsilon_hat));
   float tolerance = 1.E-4;
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
@@ -189,22 +222,22 @@ TEST_F(FourierTest, TestDivSigma)
   // Initialize tau with random numbers
   std::generate(tau, tau + 6 * nvoxels, [&]()
                 { return distribution(rng); });
-  CUDA_CHECK(cudaMemset(dev_tau, 0, 6 * nvoxels * sizeof(cufftComplex)));
-  CUDA_CHECK(cudaMemcpy2D(dev_tau, 2 * sizeof(float), tau, sizeof(float), sizeof(float), 6 * nvoxels, cudaMemcpyHostToDevice));
+
+  CUDA_CHECK(cudaMemcpy(dev_tau, tau, 6 * nvoxels * sizeof(float), cudaMemcpyHostToDevice));
 
   // Fourier transform the real-valued tau
-  CUFFT_CHECK(cufftExecC2C(plan, dev_tau, dev_tau_hat, CUFFT_FORWARD));
+  CUFFT_CHECK(cufftExecR2C(plan_forward, dev_tau, dev_tau_hat));
   CUDA_CHECK(cudaDeviceSynchronize());
 
   // Solve on device and Fourier transform back
   fourier_solve_device(dev_tau_hat, dev_epsilon_hat, dev_xi_zero,
                        lambda_0, mu_0, grid_spec);
   CUDA_CHECK(cudaDeviceSynchronize());
-  CUFFT_CHECK(cufftExecC2C(plan, dev_epsilon_hat, dev_epsilon, CUFFT_INVERSE));
+  CUFFT_CHECK(cufftExecC2R(plan_inverse, dev_epsilon_hat, dev_epsilon));
   CUDA_CHECK(cudaDeviceSynchronize());
 
   // Copy back to host
-  CUDA_CHECK(cudaMemcpy2D(epsilon, sizeof(float), dev_epsilon, 2 * sizeof(float), sizeof(float), 6 * nvoxels, cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpy(epsilon, dev_epsilon, 6 * nvoxels * sizeof(float), cudaMemcpyDeviceToHost));
 
   // Scale by 1/nvoxels to account for the fact that the inverse Fourier transform is not
   // normalised in cuFFT
