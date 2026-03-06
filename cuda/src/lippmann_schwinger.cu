@@ -99,21 +99,7 @@ float LippmannSchwingerSolver::relative_divergence_norm(cufftComplex *__restrict
   CUDA_CHECK(cudaDeviceSynchronize());
   size_t nmodes = grid_spec.number_of_modes();
   // STEP 1: Compute nrm_div_sigma =  ||div(sigma)||
-  int nx = grid_spec.nx;
-  int ny = grid_spec.ny;
-  int nz = grid_spec.nz;
-
-  float nrm2 = 0;
-  float nrm = 0;
-  CUBLAS_CHECK(cublasScnrm2(handle, 3 * nx * ny, dev_div_sigma_hat, nz / 2 + 1, &nrm));
-  nrm2 += nrm * nrm;
-  for (int k = 1; k < nz / 2 + 1; ++k)
-  {
-    nrm = 0;
-    CUBLAS_CHECK(cublasScnrm2(handle, 3 * nx * ny, dev_div_sigma_hat + k, nz / 2 + 1, &nrm));
-    nrm2 += 2 * nrm * nrm;
-  }
-  float nrm_div_sigma = sqrt(nrm2);
+  float nrm_div_sigma = reduce_fourier(dev_div_sigma_hat, dev_sum, sum, 3, grid_spec);
   // STEP 2: compute ||hat(sigma)||
   // Extract zero mode, which is identical to the sum of sigma over the domain, i.e. nvoxels * <sigma>
   CUDA_CHECK(cudaMemcpy2D(sigma_0, sizeof(cufftComplex), dev_sigma_hat, nmodes * sizeof(cufftComplex), sizeof(cufftComplex), 6, cudaMemcpyDeviceToHost));
@@ -127,8 +113,6 @@ LippmannSchwingerSolver::LippmannSchwingerSolver(const GridSpec grid_spec, const
 {
   size_t nvoxels = grid_spec.number_of_voxels();
   size_t nmodes = grid_spec.number_of_modes();
-  // Initialise cuBLAS
-  CUBLAS_CHECK(cublasCreate(&handle));
   // Set up cuFFT plans
   int n[3] = {(int)grid_spec.nx, (int)grid_spec.ny, (int)grid_spec.nz};
   int n_fourier[3] = {(int)grid_spec.nx, (int)grid_spec.ny, (int)grid_spec.nz / 2 + 1};
@@ -147,6 +131,8 @@ LippmannSchwingerSolver::LippmannSchwingerSolver(const GridSpec grid_spec, const
   CUDA_CHECK(cudaMalloc(&dev_residual_hat, 6 * nmodes * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMallocHost(&sigma_0, 6 * sizeof(cufftComplex)));
   CUDA_CHECK(cudaMalloc(&dev_epsilon_bar, 6 * sizeof(cufftComplex)));
+  CUDA_CHECK(cudaMalloc(&dev_sum, sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&sum, sizeof(float)));
   // initialize Fourier vectors
   initialize_xi_device(dev_xi, grid_spec);
   initialize_xizero_device(dev_xi_zero, grid_spec);
@@ -170,7 +156,8 @@ LippmannSchwingerSolver::~LippmannSchwingerSolver()
   CUDA_CHECK(cudaFree(dev_sigma_hat));
   CUDA_CHECK(cudaFree(dev_epsilon_bar));
   CUDA_CHECK(cudaFreeHost(sigma_0));
-  CUBLAS_CHECK(cublasDestroy(handle));
+  CUDA_CHECK(cudaFree(dev_sum));
+  CUDA_CHECK(cudaFreeHost(sum));
 }
 
 /* apply solver */

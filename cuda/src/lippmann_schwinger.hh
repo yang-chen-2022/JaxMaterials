@@ -127,6 +127,10 @@ protected:
     float *dev_lambda;
     /** @brief Lame parameter mu on device */
     float *dev_mu;
+    /** @brief temporary for sum on device */
+    float *dev_sum;
+    /** @brief temporary for sum on host */
+    float *sum;
     /** @brief real-valued strain epsilon on device */
     float *dev_epsilon;
     /** @brief real-valued mean strain epsilon on device */
@@ -145,8 +149,6 @@ protected:
     cufftComplex *dev_residual_hat;
     /** @brief temporary storage for zero mode of sigma in Fourier space */
     cufftComplex *sigma_0;
-    /** @brief cuBLAS handle */
-    cublasHandle_t handle;
     /** @brief cuFFT plan for forward FFT */
     cufftHandle plan_forward;
     /** @brief cuFFT plan for inverse FFT */

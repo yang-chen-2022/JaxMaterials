@@ -189,7 +189,7 @@ __global__ void reduce_fourier_kernel(cufftComplex *dev_u, float *dev_sum, const
  * @param[in] batchsize number of fields B
  * @param[in]  grid_spec Specification of computational grid
  */
-float reduce_fourier(cufftComplex *dev_u, float *dev_sum, float *sum, size_t batchsize, const GridSpec grid_spec)
+float reduce_fourier(cufftComplex *dev_u, float *dev_sum, float *sum, const size_t batchsize, const GridSpec grid_spec)
 {
     const size_t nmodes = grid_spec.number_of_modes();
     size_t nblocks = (batchsize * nmodes + BLOCKSIZE - 1) / BLOCKSIZE;

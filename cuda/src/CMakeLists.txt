@@ -23,7 +23,6 @@ target_sources(lippmannschwinger
 
 target_link_libraries(lippmannschwinger
     PRIVATE
-        CUDA::cublas
         CUDA::cufft
 )
 
@@ -36,7 +35,6 @@ add_executable(driver)
 target_link_libraries(driver 
     PRIVATE
         CUDA::cufft
-        CUDA::cublas
         lippmannschwinger
 )
 target_sources(driver
@@ -56,7 +54,6 @@ if(GTest_FOUND)
     target_link_libraries(test
         PRIVATE
             CUDA::cufft
-            CUDA::cublas
             lippmannschwinger
             GTest::gtest_main                     
     )
