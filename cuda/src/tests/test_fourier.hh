@@ -125,7 +125,40 @@ TEST_F(FourierTest, TestXiZero)
 
   // Free memory
   CUDA_CHECK(cudaFreeHost(xi_zero_ref));
+  EXPECT_NEAR(rel_diff, 0.0, tolerance);
+}
 
+/* Check whether norm of complex-Hermitian Fourier vector is computed correctly */
+TEST_F(FourierTest, TestFourierNorm)
+{
+  // allocate memory
+  float *sum;
+  float *dev_sum;
+  // allocate memory
+  cudaMallocHost(&sum, sizeof(float));
+  cudaMalloc(&dev_sum, sizeof(float));
+  size_t nmodes = grid_spec.number_of_modes();
+  size_t batchsize = 6;
+  std::generate(epsilon_hat, epsilon_hat + 6 * nmodes, [&]()
+                { cufftComplex z; z.x = distribution(rng); z.y = distribution(rng); return z; });
+
+  // copy data to device
+  CUDA_CHECK(cudaMemcpy(dev_epsilon_hat, epsilon_hat, batchsize * nmodes * sizeof(cufftComplex), cudaMemcpyHostToDevice));
+  float sum_f = reduce_fourier(dev_epsilon_hat, dev_sum, sum, batchsize, grid_spec);
+  float s = 0;
+  for (int i = 0; i < batchsize * nmodes; ++i)
+  {
+    float nrm2 = epsilon_hat[i].x * epsilon_hat[i].x + epsilon_hat[i].y * epsilon_hat[i].y;
+    if (i % (grid_spec.nz / 2 + 1) == 0)
+      s += nrm2;
+    else
+      s += 2 * nrm2;
+  }
+  float rel_diff = abs((sqrt(s) - sum_f) / sqrt(s));
+  // free memory
+  CUDA_CHECK(cudaFreeHost(sum));
+  CUDA_CHECK(cudaFree(dev_sum));
+  float tolerance = 1E-4;
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }
 
@@ -194,7 +227,7 @@ TEST_F(FourierTest, TestFourierDivergence)
   // Compute norms ||D(epsilon)|| and ||xi.hat(epsilon)||
   float norm_real = vector_norm(div_epsilon, nvoxels);
   float norm_fourier = vector_norm(div_epsilon_hat_full, nvoxels) / sqrt(nvoxels);
-  float rel_diff = (norm_fourier - norm_real) / norm_real;
+  float rel_diff = abs(norm_fourier - norm_real) / norm_real;
   // Free memory
   CUDA_CHECK(cudaFreeHost(div_epsilon));
   CUDA_CHECK(cudaFree(dev_xi));
@@ -262,7 +295,7 @@ TEST_F(FourierTest, TestDivSigma)
 
   float sigma_nrm = tensor_norm(sigma, nvoxels);
   float div_nrm = vector_norm(div_sigma, nvoxels);
-  float rel_diff = div_nrm / sigma_nrm;
+  float rel_diff = abs(div_nrm / sigma_nrm);
   float tolerance = 5.E-5;
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }

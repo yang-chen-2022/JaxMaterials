@@ -50,6 +50,38 @@ void initialize_xizero_device(float *dev_xi_zero, const GridSpec grid_spec);
  */
 void initialize_xizero_host(float *xi_zero, const GridSpec grid_spec);
 
+/** @brief Compute sum of squared absolute values of complex-Hermitian Fourier array
+ *
+ * The array dev_u is assumed to represent a four-dimensional complex-Hermitian Fourier field of shape
+ * (B,nx,ny,nz/2+1), i.e. n = B*nx*ny*(nz/2+1) entries in total. The storage format is row-major, with
+ * the final index running fastest.
+ *
+ * This kernel computes the following sum:
+ *
+ *   sum_{b,i,j} ( |u_{b,i,j,0}|^2 + 2 sum_{k>0} |u_{b,i,j,k}|^2 )
+ *
+ * @param[in] dev_u complex-valued device array of size n
+ * @param[out] dev_sum device array (of size 1) holding the final sum
+ * @param[in] n size of input array dev_u
+ * @param[in] nz number of modes in the z-direction
+ */
+__global__ void reduce_fourier_kernel(cufftComplex *dev_u, float *dev_sum, const int n, const int nz);
+
+/** @brief Compute norm of complex-Hermitian Fourier field
+ *
+ *
+ * The array dev_u is assumed to represent a four-dimensional complex-Hermitian Fourier field of shape
+ * (B,nx,ny,nz/2+1), i.e. n = B*nx*ny*(nz/2+1) entries in total. The storage format is row-major, with
+ * the final index running fastest.
+ *
+ * @param[in] dev_u the device array to be summed, size n
+ * @param[inout] dev_sum temporary scratch space for sum on device
+ * @param[inout] sum temporary scratch space for sum on host
+ * @param[in] batchsize number of fields B
+ * @param[in]  grid_spec Specification of computational grid
+ */
+float reduce_fourier(cufftComplex *dev_u, float *dev_sum, float *sum, size_t batchsize, const GridSpec grid_spec);
+
 /** @brief Compute divergence in Fourier space
  *
  * Compute xi.sigma
