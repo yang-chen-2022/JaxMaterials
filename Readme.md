@@ -1,5 +1,7 @@
 # Jax Materials
-High performance implementation of linear elasticity solvers based on [CUDA](https://developer.nvidia.com/cuda) and [Jax](https://docs.jax.dev/en/latest/index.html#). These solvers are used in machine learning framework for predicting the effective linear elasticity tensor for materials containing layers of fibres.
+High performance implementation of linear elasticity solvers based on [CUDA](https://developer.nvidia.com/cuda) and [Jax](https://docs.jax.dev/en/latest/index.html#). These solvers will eventually be used in machine learning framework for predicting the effective linear elasticity tensor for materials containing layers of fibres.
+
+**Parts of this repository are still under construction.**
 
 ## Contents
 This repository contains the following code:
@@ -8,7 +10,7 @@ This repository contains the following code:
 A highly efficient [CUDA](https://developer.nvidia.com/cuda) accelerated solver of the linear elasticity equation in isotropic materials based on the Lippmann Schwinger method by [[Moulinec and Suquet, 1998. Computer Methods in Applied Mechanics and Engineering, 157(1-2), pp.69-94]](https://arxiv.org/abs/2012.08962).
 
 #### Jax linear elasticity solver
-A [Jax](https://docs.jax.dev/en/latest/index.html#) implementation of the same method, which allows back-propagation through the solver for use in a ML setting. In addition to the plain Lippmann Schwinger solver, the code also supports Anderson acceleration as described in [[Wicht, Schneider and Boehlke, T., 2021. International Journal for Numerical Methods in Engineering, 122(9), pp.2287-2311]](https://onlinelibrary.wiley.com/doi/pdfdirect/10.1002/nme.6622). Since any Jax code is inherently differentiable, the solver can be used as a building block in a machine learning framework (see below).
+A [Jax](https://docs.jax.dev/en/latest/index.html#) implementation of the same method, which allows back-propagation through the solver for later use in a ML setting. In addition to the plain Lippmann Schwinger solver, the code also supports Anderson acceleration as described in [[Wicht, Schneider and Boehlke, T., 2021. International Journal for Numerical Methods in Engineering, 122(9), pp.2287-2311]](https://onlinelibrary.wiley.com/doi/pdfdirect/10.1002/nme.6622). Since any Jax code is inherently differentiable, the solver can be used as a building block in a machine learning framework (see below).
 
 Both solvers use the same discretisation as the [AMITEX solver](https://amitexfftp.github.io/AMITEX/), which is described in [[Gelebart  2020. Comptes Rendus. Mecanique, 348(8-9), pp.693-704]](https://comptes-rendus.academie-sciences.fr/mecanique/item/CRMECA_2020__348_8-9_693_0/). For mathematical details see the [`./doc` subdirectory](./doc/).
 
@@ -17,8 +19,8 @@ Code for sampling the Lame parameters which can be used as an input to the solve
 
 ![Generated fibres](doc/material_properties.png)
 
-#### ML toolchain
-A ML toolchain which uses the above code to train machine learning models that predict the efficient elasticity tensor for a given pair of Lame-parameter fields.
+#### ML toolchain (under construction)
+A ML toolchain which uses the above code to train machine learning models that predict the efficient elasticity tensor for a given pair of Lame-parameter fields will be added later.
 
 ## Installation
 
