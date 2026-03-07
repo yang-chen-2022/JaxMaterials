@@ -76,7 +76,6 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
   CUDA_CHECK(cudaDeviceSynchronize());
 
   float reldiv_fourier = solver.relative_divergence_norm(dev_sigma_hat);
-  printf("rel_div_real = %e rel_div_fourier = %e\n", reldiv_real, reldiv_fourier);
   float rel_diff = (reldiv_fourier - reldiv_real) / reldiv_real;
   // free memory
   CUDA_CHECK(cudaFree(dev_sigma));

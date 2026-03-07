@@ -149,7 +149,8 @@ TEST_F(FourierTest, TestFourierNorm)
   for (int i = 0; i < batchsize * nmodes; ++i)
   {
     float nrm2 = epsilon_hat[i].x * epsilon_hat[i].x + epsilon_hat[i].y * epsilon_hat[i].y;
-    if (i % (grid_spec.nz / 2 + 1) == 0)
+    int r = i % (grid_spec.nz / 2 + 1);
+    if ((r == 0) or (grid_spec.nz % 2 == 0) and (r == grid_spec.nz / 2))
       s += nrm2;
     else
       s += 2 * nrm2;

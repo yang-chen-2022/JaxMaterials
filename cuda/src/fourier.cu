@@ -152,7 +152,8 @@ __global__ void reduce_fourier_kernel(cufftComplex *dev_u, float *dev_sum, const
         float u_x = dev_u[idx].x;
         float u_y = dev_u[idx].y;
         float u_nrm2 = u_x * u_x + u_y * u_y;
-        if (idx % (nz / 2 + 1) == 0)
+        int r = idx % (nz / 2 + 1);
+        if ((r == 0) or (nz % 2 == 0) and (r == nz / 2))
             nrm2 = u_nrm2;
         else
             nrm2 = 2 * u_nrm2;
@@ -194,7 +195,7 @@ float reduce_fourier(cufftComplex *dev_u, float *dev_sum, float *sum, const size
     const size_t nmodes = grid_spec.number_of_modes();
     size_t nblocks = (batchsize * nmodes + BLOCKSIZE - 1) / BLOCKSIZE;
     CUDA_CHECK(cudaMemset(dev_sum, 0, sizeof(float)));
-    reduce_fourier_kernel<<<nblocks, BLOCKSIZE, BLOCKSIZE / 32 * sizeof(float)>>>(dev_u, dev_sum, batchsize * nmodes, grid_spec.nz);
+    reduce_fourier_kernel<<<nblocks, BLOCKSIZE, BLOCKSIZE / WARPSIZE * sizeof(float)>>>(dev_u, dev_sum, batchsize * nmodes, grid_spec.nz);
     CUDA_CHECK(cudaDeviceSynchronize());
     CUDA_CHECK(cudaMemcpy(sum, dev_sum, sizeof(float), cudaMemcpyHostToDevice));
     float nrm = sqrt(sum[0]);

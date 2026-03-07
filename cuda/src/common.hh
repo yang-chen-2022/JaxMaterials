@@ -9,6 +9,9 @@
 #include <math.h>
 #include <stdio.h>
 
+// Size of a warp
+#define WARPSIZE 32
+
 // Block size used for 3d kernel launches
 #define BLOCKSIZE_X 8
 #define BLOCKSIZE_Y 8
