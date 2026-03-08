@@ -158,6 +158,8 @@ LippmannSchwingerSolver::~LippmannSchwingerSolver()
   CUDA_CHECK(cudaFreeHost(sigma_0));
   CUDA_CHECK(cudaFree(dev_sum));
   CUDA_CHECK(cudaFreeHost(sum));
+  CUFFT_CHECK(cufftDestroy(plan_forward));
+  CUFFT_CHECK(cufftDestroy(plan_inverse));
 }
 
 /* apply solver */
