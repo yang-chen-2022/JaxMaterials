@@ -42,7 +42,7 @@ class SimpleCNN(nn.Module):
 
 
 # batch size
-batchsize = 16
+batchsize = 4
 # number of epochs used for training
 epochs = 32
 
@@ -91,4 +91,4 @@ for epoch in range(epochs):
         params = optax.apply_updates(params, increment)
         loss = loss_fn(params, X_, y_true_)
         running_loss += (loss - running_loss) / (batch + 1)
-    print(f"epoch {epoch:4d} training loss = {running_loss:8.4f}")
+    print(f"epoch {epoch:4d} training loss = {running_loss:8.4e}")
