@@ -117,8 +117,8 @@ TEST_P(LippmannSchwingerTest, TestHomogeneousMaterial)
   std::fill(lambda, lambda + nvoxels, 1.2);
 
   LippmannSchwingerSolver solver(grid_spec);
-  float rtol = 1.E-4;
-  float atol = 1.E-20;
+  float rtol = 1.E-20;
+  float atol = 1.E-4;
   int iter = solver.apply(lambda, mu, epsilon_bar, epsilon, sigma, rtol, atol);
   CUDA_CHECK(cudaFreeHost(mu));
   CUDA_CHECK(cudaFreeHost(lambda));
@@ -152,8 +152,8 @@ TEST_P(LippmannSchwingerTest, TestConvergence)
                 { return distribution(rng); });
 
   LippmannSchwingerSolver solver(grid_spec);
-  float rtol = 1.E-4;
-  float atol = 1.E-20;
+  float rtol = 1.E-20;
+  float atol = 1.E-4;
   int iter = solver.apply(lambda, mu, epsilon_bar, epsilon, sigma, rtol, atol);
 
   // normalised divergence
