@@ -267,7 +267,7 @@ class LayeredFibresDatasetGenerator:
             / self.grid_spec.nx
             * (1 / 2 + np.arange(self.grid_spec.nx)),
             self.grid_spec.Ly
-            / self.grid_spec.nz
+            / self.grid_spec.ny
             * (1 / 2 + np.arange(self.grid_spec.ny)),
             self.grid_spec.Lz
             / self.grid_spec.nz
