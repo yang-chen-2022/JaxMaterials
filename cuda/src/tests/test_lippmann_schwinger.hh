@@ -94,6 +94,7 @@ TEST_P(LippmannSchwingerTest, TestRelativeDivergence)
   CUDA_CHECK(cudaFree(dev_sigma_hat));
   CUDA_CHECK(cudaFreeHost(sigma));
   CUDA_CHECK(cudaFreeHost(div_sigma));
+  CUFFT_CHECK(cufftDestroy(plan));
   float tolerance = 1.E-4;
   EXPECT_NEAR(rel_diff, 0.0, tolerance);
 }

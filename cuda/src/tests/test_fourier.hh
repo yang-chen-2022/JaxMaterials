@@ -77,6 +77,8 @@ protected:
     CUDA_CHECK(cudaFreeHost(epsilon));
     CUDA_CHECK(cudaFreeHost(sigma));
     CUDA_CHECK(cudaFreeHost(div_sigma));
+    CUFFT_CHECK(cufftDestroy(plan_forward));
+    CUFFT_CHECK(cufftDestroy(plan_inverse));
   }
   /* Grid specification */
   GridSpec grid_spec;
