@@ -2,6 +2,7 @@
 #ifndef TEST_FOURIER_HH
 #define TEST_FOURIER_HH TEST_FOURIER_HH
 #include <random>
+#include <string>
 #include <algorithm>
 #include <gtest/gtest.h>
 #include "cufft.h"
@@ -9,7 +10,7 @@
 #include "derivatives.hh"
 #include "fourier.hh"
 
-class FourierTest : public ::testing::Test
+class FourierTest : public ::testing::TestWithParam<std::string>
 {
 public:
   /** @brief Constructor
@@ -21,9 +22,18 @@ protected:
   /** @brief Initialise tests */
   void SetUp() override
   {
-    grid_spec.nx = 48;
-    grid_spec.ny = 64;
-    grid_spec.nz = 32;
+    if (GetParam() == "even")
+    {
+      grid_spec.nx = 48;
+      grid_spec.ny = 64;
+      grid_spec.nz = 32;
+    }
+    else
+    {
+      grid_spec.nx = 47;
+      grid_spec.ny = 61;
+      grid_spec.nz = 37;
+    }
     grid_spec.Lx = 1.1;
     grid_spec.Ly = 0.9;
     grid_spec.Lz = 0.7;
@@ -106,9 +116,11 @@ protected:
   cufftHandle plan_inverse;
 };
 
+INSTANTIATE_TEST_SUITE_P(Fourier, FourierTest, testing::Values("even", "odd"));
+
 /** @brief Check whether xi-zero is constructed consistently on device and host
  */
-TEST_F(FourierTest, TestXiZero)
+TEST_P(FourierTest, TestXiZero)
 {
   float tolerance = 1.E-6;
   // halo size
@@ -129,7 +141,7 @@ TEST_F(FourierTest, TestXiZero)
 }
 
 /* Check whether norm of complex-Hermitian Fourier vector is computed correctly */
-TEST_F(FourierTest, TestFourierNorm)
+TEST_P(FourierTest, TestFourierNorm)
 {
   // allocate memory
   float *sum;
@@ -165,7 +177,7 @@ TEST_F(FourierTest, TestFourierNorm)
 
 /* Check whether divergence computation is consistent in Fourier- and real space
  */
-TEST_F(FourierTest, TestFourierDivergence)
+TEST_P(FourierTest, TestFourierDivergence)
 {
   size_t nvoxels = grid_spec.number_of_voxels();
   size_t nmodes = grid_spec.number_of_modes();
@@ -250,7 +262,7 @@ TEST_F(FourierTest, TestFourierDivergence)
  * This test checks that div(sigma^0) = 0 in real space.
  *
  */
-TEST_F(FourierTest, TestDivSigma)
+TEST_P(FourierTest, TestDivSigma)
 {
   size_t nvoxels = grid_spec.number_of_voxels();
   // Initialize tau with random numbers

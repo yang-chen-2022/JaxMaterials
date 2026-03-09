@@ -2,12 +2,13 @@
 #define TEST_LIPPMANN_SCHWINGER_HH TEST_LIPPMANN_SCHWINGER_HH
 #include <random>
 #include <algorithm>
+#include <string>
 #include <gtest/gtest.h>
 #include "cufft.h"
 #include "common.hh"
 #include "lippmann_schwinger.hh"
 
-class LippmannSchwingerTest : public ::testing::Test
+class LippmannSchwingerTest : public ::testing::TestWithParam<std::string>
 {
 public:
   /** @Create a new instance */
@@ -17,9 +18,18 @@ protected:
   /** @brief initialise tests */
   void SetUp() override
   {
-    grid_spec.nx = 48;
-    grid_spec.ny = 64;
-    grid_spec.nz = 32;
+    if (GetParam() == "even")
+    {
+      grid_spec.nx = 48;
+      grid_spec.ny = 64;
+      grid_spec.nz = 32;
+    }
+    else
+    {
+      grid_spec.nx = 47;
+      grid_spec.ny = 61;
+      grid_spec.nz = 37;
+    }
     grid_spec.Lx = 1.1;
     grid_spec.Ly = 0.9;
     grid_spec.Lz = 0.7;
@@ -28,9 +38,11 @@ protected:
   GridSpec grid_spec;
 };
 
+INSTANTIATE_TEST_SUITE_P(LS, LippmannSchwingerTest, testing::Values("even", "odd"));
+
 /** @brief Check whether relative divergence is computed consistently
  */
-TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
+TEST_P(LippmannSchwingerTest, TestRelativeDivergence)
 {
   /* Random number generator */
   std::default_random_engine rng;
@@ -88,7 +100,7 @@ TEST_F(LippmannSchwingerTest, TestRelativeDivergence)
 
 /** @brief Check whether solver converges in zero iterations for homogeneous materials
  */
-TEST_F(LippmannSchwingerTest, TestHomogeneousMaterial)
+TEST_P(LippmannSchwingerTest, TestHomogeneousMaterial)
 {
   size_t nvoxels = grid_spec.number_of_voxels();
   float *mu = nullptr;
@@ -116,7 +128,7 @@ TEST_F(LippmannSchwingerTest, TestHomogeneousMaterial)
 
 /** @brief Check whether solver converges
  */
-TEST_F(LippmannSchwingerTest, TestConvergence)
+TEST_P(LippmannSchwingerTest, TestConvergence)
 {
   size_t nvoxels = grid_spec.number_of_voxels();
   float *mu = nullptr;
