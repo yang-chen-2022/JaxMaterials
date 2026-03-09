@@ -167,7 +167,7 @@ class LayeredFibresDatasetGenerator:
                 rtol = 1.0e-12 if self.dtype == np.float64 else 1.0e-4
                 atol = 1.0e-12 if self.dtype == np.float64 else 1.0e-4
                 epsilon, sigma, iter = lippmann_schwinger_cuda(
-                    lmbda, mu, E_mean, self.grid_spec, rtol=rtol, atol=atol
+                    lmbda, mu, E_mean, self.grid_spec, rtol=rtol, atol=atol, maxiter=100
                 )
                 self._sigma_bar[j, k, :] = jnp.mean(sigma, axis=(1, 2, 3))
 
