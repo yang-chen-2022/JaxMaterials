@@ -15,17 +15,15 @@ from jaxmaterials.solver.lippmann_schwinger import (
 jax.config.update("jax_enable_x64", True)
 
 
-@pytest.fixture
-def grid_spec():
+@pytest.fixture(params=[[64, 48, 32], [57, 43, 37]], ids=["even", "odd"])
+def grid_spec(request):
     """Return grid specification"""
     # Domain size in all three spatial direction
     Lx = 1.2
     Ly = 0.8
     Lz = 0.9
     # Number of grid cells in all three spatial directions
-    nx = 64
-    ny = 48
-    nz = 32
+    nx, ny, nz = request.param
 
     return GridSpec(nx, ny, nz, Lx, Ly, Lz)
 
