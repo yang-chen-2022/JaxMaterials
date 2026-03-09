@@ -251,6 +251,9 @@ def lippmann_schwinger_cuda(
         maxiter,
         verbose,
     )
+    print(iter, maxiter)
+    if iter == maxiter:
+        raise RuntimeError(f"Solver failed to converge after {maxiter} iterations")
     return (
         epsilon,
         sigma,
