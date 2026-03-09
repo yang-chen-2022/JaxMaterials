@@ -42,7 +42,7 @@ class SimpleCNN(nn.Module):
 
 
 # batch size
-batchsize = 2
+batchsize = 16
 # number of epochs used for training
 epochs = 32
 
