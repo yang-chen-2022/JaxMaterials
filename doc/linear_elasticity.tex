@@ -368,6 +368,52 @@ The Lippmann-Schwinger algorithm with Anderson acceleration \cite{wicht2021ander
 \State{\Return $\varepsilon$}
 \end{algorithmic}
 \end{algorithm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Sensitivity with the adjoint method}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+We would like to compute the sensitivities
+\begin{xalignat}{3}
+    \varepsilon^{(\overline{\varepsilon}_{rs})}_{k\ell}(x) &:= \frac{\delta \varepsilon_{k\ell}(x)}{\delta \overline{\varepsilon}_{rs}}, &
+    \varepsilon^{(\lambda)}_{k\ell}(x,x') &:= \frac{\delta \varepsilon_{k\ell}(x)}{\delta \lambda(x')}, &
+    \varepsilon^{(\mu)}_{k\ell}(x,x') &:= \frac{\delta \varepsilon_{k\ell}(x)}{\delta \mu(x')}.
+\end{xalignat}
+where $\varepsilon_{k\ell}$ solves the (discretised) equations in \eqref{eqn:continuum_equations} for given inputs $(\overline{\varepsilon}_{k\ell},\lambda,\mu)$.
+
+First note that this means that
+\begin{equation}
+0 = \Phi_i\left[\varepsilon|\overline{\varepsilon},\lambda,\mu\right] = D_i^- \left(\lambda \sum_{k} (\varepsilon^*_{kk}+\overline{\varepsilon}_{kk})\right) + D_j^- (\mu\left(\varepsilon^*_{ij}+\varepsilon^*_{ji}+\overline{\varepsilon}_{ij}+\overline{\varepsilon}_{ji})\right)
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Sensitivity with respect to $\overline{\varepsilon}_{rs}$}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+We have that for all points $x$
+\begin{equation}
+0 = \frac{d\Phi_i(x)}{d\overline{\varepsilon}_{rs}} = \frac{\delta \Phi_i(x)}{\delta \overline{\varepsilon}_{rs}} + \sum_{x''}\sum_{k\ell} \frac{\delta \Phi_i(x)}{\delta \varepsilon_{k\ell}(x'')} \varepsilon^{*(\overline{\varepsilon}_{rs})}_{k\ell}(x'')\qquad\text{with $\varepsilon^{*(\overline{\varepsilon}_{rs})}_{k\ell}(x) := \frac{\delta \varepsilon^*_{k\ell}}{\delta \overline{\varepsilon}_{rs}}(x)$}
+\end{equation}
+Observe that
+\begin{equation}
+\sum_{x''}\sum_{k\ell}\frac{\delta \Phi_i(x)}{\delta \varepsilon_{k\ell}(x'')} \varepsilon^{*(\overline{\varepsilon}_{rs})}_{k\ell}(x'') = \Phi_i \left[\varepsilon^{*(\overline{\varepsilon}_{rs})}|0,\lambda,\mu\right](x)
+\end{equation}
+and
+\begin{equation}
+\frac{\delta \Phi_i(x)}{\delta \overline{\varepsilon}_{rs}} = D_j^-\left(\lambda(x)\delta_{ij}\delta_{rs} + \mu(x) (\delta_{ir}\delta_{js}+\delta_{is}\delta_{jr})\right) =: -D_j \rho_{ij}^{(\overline{\varepsilon}_{rs})}(x)
+\end{equation}
+Hence, to compute $\varepsilon^{*(\overline{\varepsilon}_{rs})}_{k\ell}$ we need to solve
+\begin{equation}
+    \Phi_i \left[\varepsilon^{*(\overline{\varepsilon}_{rs})}|0,\lambda,\mu\right] = D_j\rho_{ij}^{(\overline{\varepsilon}_{rs})}
+\end{equation}
+which is nothing but the original equation but with $\overline{\varepsilon}=0$ and a non-zero right hand side. Since $\varepsilon=\varepsilon^*+\overline{\varepsilon}$, we immediately get that
+\begin{equation}
+\varepsilon^{(\overline{\varepsilon}_{rs})}_{k\ell}(x) = \varepsilon^{(\overline{\varepsilon}_{rs})}_{k\ell} = \delta_{rk}\delta_{s\ell} + \varepsilon^{*(\overline{\varepsilon}_{rs})}_{k\ell}(x).
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Sensitivity with respect to $\lambda$}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The idea is the same here:
+\begin{equation}
+0 = \frac{d\Phi_i(x)}{d\lambda(x')} = \frac{\delta \Phi_i(x)}{\delta \lambda(x')} + \sum_{x''}\sum_{k\ell} \frac{\delta \Phi_i(x)}{\delta \varepsilon_{k\ell}(x'')} \varepsilon^{(\lambda)}_{k\ell}(x'',x')\qquad\text{with $\varepsilon^{(\lambda)}_{k\ell}(x,x') := \frac{\delta \varepsilon_{k\ell}(x)}{\delta \lambda(x')}$}
+\end{equation}
+
 \bibliographystyle{unsrt}
 \bibliography{linear_elasticity}
 \end{document}

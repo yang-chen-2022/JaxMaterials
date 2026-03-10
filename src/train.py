@@ -49,11 +49,18 @@ epochs = 32
 
 filename = "fibres.h5"
 
-# load data from disk
+# load data from disk and split into training/validation data
 dataset = LayeredFibresDataset(filename, features_last=True)
+n_samples = len(dataset)
+gen = torch.Generator().manual_seed(141467)
+train_dataset, valid_dataset = torch.utils.data.random_split(dataset, [0.8, 0.2], gen)
 train_dataloader = torch.utils.data.DataLoader(
-    dataset, batch_size=batchsize, shuffle=True
+    train_dataset, batch_size=batchsize, shuffle=True
 )
+valid_dataloader = torch.utils.data.DataLoader(
+    valid_dataset, batch_size=batchsize, shuffle=True
+)
+
 
 # initialise the model and print it to screen
 model = SimpleCNN()
@@ -64,7 +71,7 @@ X_first = jnp.asarray(X_first)
 params = model.init(jax.random.key(0), X_first)
 print(model.tabulate(jax.random.key(0), X_first))
 
-start_learning_rate = 1e-1
+start_learning_rate = 1e-2
 optimizer = optax.adam(start_learning_rate)
 opt_state = optimizer.init(params)
 
@@ -80,15 +87,33 @@ def loss_fn(params, X, y_true):
     return jnp.mean(optax.l2_loss(y, y_true))
 
 
+# mean and standard deviation, used for data normalisation
+mean_X, mean_y = jnp.asarray(dataset.mean[0]), jnp.asarray(dataset.mean[1])
+std_X, std_y = jnp.asarray(dataset.mean[0]), jnp.asarray(dataset.mean[1])
+
 # Train model
 for epoch in range(epochs):
-    running_loss = 0
-    for batch, (X, y_true) in enumerate(train_dataloader):
-        X_ = jnp.asarray(X)
-        y_true_ = jnp.asarray(y_true)
-        grads = jax.grad(loss_fn)(params, X_, y_true_)
+    train_loss = 0
+    nbatches = 0
+    # compute gradients with training data
+    for X_train, y_true_train in train_dataloader:
+        nbatches += 1
+        X = (jnp.asarray(X_train) - mean_X) / std_X
+        y_true = (jnp.asarray(y_true_train) - mean_y) / std_y
+        grads = jax.grad(loss_fn)(params, X, y_true)
         increment, opt_state = optimizer.update(grads, opt_state)
         params = optax.apply_updates(params, increment)
-        loss = loss_fn(params, X_, y_true_)
-        running_loss += (loss - running_loss) / (batch + 1)
-    print(f"epoch {epoch:4d} training loss = {running_loss:8.4e}")
+        train_loss += loss_fn(params, X, y_true)
+    train_loss /= nbatches
+    # evaluate validation loss
+    valid_loss = 0
+    nbatches = 0
+    for X_valid, y_true_valid in valid_dataloader:
+        nbatches += 1
+        X = (jnp.asarray(X_valid) - mean_X) / std_X
+        y_true = (jnp.asarray(y_true_valid) - mean_y) / std_y
+        valid_loss += loss_fn(params, X, y_true)
+    valid_loss /= nbatches
+    print(
+        f"epoch {epoch:4d}  loss = {train_loss:8.4e} [train] / {valid_loss:8.4e} [validation]"
+    )

@@ -45,6 +45,20 @@ class LayeredFibresDataset(torch.utils.data.Dataset):
         :arg idx: index"""
         return self._lame_parameters[idx, ...], self._sigma_bar[idx, ...]
 
+    @property
+    def mean(self):
+        """Compute pointwise mean"""
+        return np.mean(self._lame_parameters, axis=(0,)), np.mean(
+            self._sigma_bar, axis=(0,)
+        )
+
+    @property
+    def std(self):
+        """Compute pointwise standard deviation"""
+        return np.std(self._lame_parameters, axis=(0,)), np.std(
+            self._sigma_bar, axis=(0,)
+        )
+
 
 class LayeredFibresDatasetGenerator:
     """Dataset of material described by alternating layers of fibres
@@ -164,8 +178,8 @@ class LayeredFibresDatasetGenerator:
             for k in range(6):
                 E_mean = np.zeros(shape=(6,), dtype=self.dtype)
                 E_mean[k] = 1.0
-                rtol = 1.0e-12 if self.dtype == np.float64 else 1.0e-4
-                atol = 1.0e-12 if self.dtype == np.float64 else 1.0e-4
+                rtol = 1.0e-4
+                atol = 1.0e-4
                 epsilon, sigma, iter = lippmann_schwinger_cuda(
                     lmbda, mu, E_mean, self.grid_spec, rtol=rtol, atol=atol, maxiter=100
                 )
