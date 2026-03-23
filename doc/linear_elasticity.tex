@@ -369,6 +369,50 @@ The Lippmann-Schwinger algorithm with Anderson acceleration \cite{wicht2021ander
 \end{algorithmic}
 \end{algorithm}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Anisotropic case}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+For each Fourier model compute the symmetric $3\times 3$ matrix $K^{0}$ with
+\begin{equation}
+\begin{aligned}
+K^0_{00} &=  \mathring{\widetilde{\xi}}_0^{2} {C^{0}_{0, 0}} + 2 \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1 {C^{0}_{0, 3}} + 2 \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2 {C^{0}_{0, 4}} + \mathring{\widetilde{\xi}}_1^{2} {C^{0}_{3, 3}} + 2 \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2 {C^{0}_{3, 4}} + \mathring{\widetilde{\xi}}_2^{2} {C^{0}_{4, 4}} \\
+K^0_{10} &=  \mathring{\widetilde{\xi}}_0^{2} {C^{0}_{0, 3}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1 {C^{0}_{0, 1}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1 {C^{0}_{3, 3}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2 {C^{0}_{0, 5}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2 {C^{0}_{3, 4}} + \mathring{\widetilde{\xi}}_1^{2} {C^{0}_{1, 3}} + \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2 {C^{0}_{1, 4}} + \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2 {C^{0}_{3, 5}} + \mathring{\widetilde{\xi}}_2^{2} {C^{0}_{4, 5}} \\
+K^0_{11} &=  \mathring{\widetilde{\xi}}_0^{2} {C^{0}_{3, 3}} + 2 \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1 {C^{0}_{1, 3}} + 2 \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2 {C^{0}_{3, 5}} + \mathring{\widetilde{\xi}}_1^{2} {C^{0}_{1, 1}} + 2 \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2 {C^{0}_{1, 5}} + \mathring{\widetilde{\xi}}_2^{2} {C^{0}_{5, 5}} \\
+K^0_{20} &=  \mathring{\widetilde{\xi}}_0^{2} {C^{0}_{0, 4}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1 {C^{0}_{0, 5}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1 {C^{0}_{3, 4}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2 {C^{0}_{0, 2}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2 {C^{0}_{4, 4}} + \mathring{\widetilde{\xi}}_1^{2} {C^{0}_{3, 5}} + \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2 {C^{0}_{2, 3}} + \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2 {C^{0}_{4, 5}} + \mathring{\widetilde{\xi}}_2^{2} {C^{0}_{2, 4}} \\
+K^0_{21} &=  \mathring{\widetilde{\xi}}_0^{2} {C^{0}_{3, 4}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1 {C^{0}_{1, 4}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1 {C^{0}_{3, 5}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2 {C^{0}_{2, 3}} + \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2 {C^{0}_{4, 5}} + \mathring{\widetilde{\xi}}_1^{2} {C^{0}_{1, 5}} + \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2 {C^{0}_{1, 2}} + \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2 {C^{0}_{5, 5}} + \mathring{\widetilde{\xi}}_2^{2} {C^{0}_{2, 5}} \\
+K^0_{22} &=  \mathring{\widetilde{\xi}}_0^{2} {C^{0}_{4, 4}} + 2 \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1 {C^{0}_{4, 5}} + 2 \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2 {C^{0}_{2, 4}} + \mathring{\widetilde{\xi}}_1^{2} {C^{0}_{5, 5}} + 2 \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2 {C^{0}_{2, 5}} + \mathring{\widetilde{\xi}}_2^{2} {C^{0}_{2, 2}}
+\end{aligned}
+\end{equation}
+Invert this matrix to obtain the symmetric $3\times 3$ matrix $N^{0}$. This requires storage of additional 6 numbers for each Fourier mode. From this, build the symmetric $6\times 6$ matrix which is defined by
+\begin{equation}
+\begin{aligned}
+    \widehat{\Gamma}^0_{0,0} &=  N^{0}_{00} \mathring{\widetilde{\xi}}_0^{2} \\
+\widehat{\Gamma}^0_{1,0} &=  N^{0}_{01} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1 \\
+\widehat{\Gamma}^0_{1,1} &=  N^{0}_{11} \mathring{\widetilde{\xi}}_1^{2} \\
+\widehat{\Gamma}^0_{2,0} &=  N^{0}_{02} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2 \\
+\widehat{\Gamma}^0_{2,1} &=  N^{0}_{12} \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2 \\
+\widehat{\Gamma}^0_{2,2} &=  N^{0}_{22} \mathring{\widetilde{\xi}}_2^{2} \\
+\widehat{\Gamma}^0_{3,0} &=  \frac{N^{0}_{00} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1}{2} + \frac{N^{0}_{01} \mathring{\widetilde{\xi}}_0^{2}}{2} \\
+\widehat{\Gamma}^0_{3,1} &=  \frac{N^{0}_{01} \mathring{\widetilde{\xi}}_1^{2}}{2} + \frac{N^{0}_{11} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1}{2} \\
+\widehat{\Gamma}^0_{3,2} &=  \frac{N^{0}_{02} \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2}{2} + \frac{N^{0}_{12} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2}{2} \\
+\widehat{\Gamma}^0_{3,3} &=  \frac{N^{0}_{00} \mathring{\widetilde{\xi}}_1^{2}}{4} + \frac{N^{0}_{01} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1}{2} + \frac{N^{0}_{11} \mathring{\widetilde{\xi}}_0^{2}}{4} \\
+\widehat{\Gamma}^0_{4,0} &=  \frac{N^{0}_{00} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2}{2} + \frac{N^{0}_{02} \mathring{\widetilde{\xi}}_0^{2}}{2} \\
+\widehat{\Gamma}^0_{4,1} &=  \frac{N^{0}_{01} \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2}{2} + \frac{N^{0}_{12} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1}{2} \\
+\widehat{\Gamma}^0_{4,2} &=  \frac{N^{0}_{02} \mathring{\widetilde{\xi}}_2^{2}}{2} + \frac{N^{0}_{22} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2}{2} \\
+\widehat{\Gamma}^0_{4,3} &=  \frac{N^{0}_{00} \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2}{4} + \frac{N^{0}_{01} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2}{4} + \frac{N^{0}_{02} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1}{4} + \frac{N^{0}_{12} \mathring{\widetilde{\xi}}_0^{2}}{4} \\
+\widehat{\Gamma}^0_{4,4} &=  \frac{N^{0}_{00} \mathring{\widetilde{\xi}}_2^{2}}{4} + \frac{N^{0}_{02} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2}{2} + \frac{N^{0}_{22} \mathring{\widetilde{\xi}}_0^{2}}{4} \\
+\widehat{\Gamma}^0_{5,0} &=  \frac{N^{0}_{01} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2}{2} + \frac{N^{0}_{02} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1}{2} \\
+\widehat{\Gamma}^0_{5,1} &=  \frac{N^{0}_{11} \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2}{2} + \frac{N^{0}_{12} \mathring{\widetilde{\xi}}_1^{2}}{2} \\
+\widehat{\Gamma}^0_{5,2} &=  \frac{N^{0}_{12} \mathring{\widetilde{\xi}}_2^{2}}{2} + \frac{N^{0}_{22} \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2}{2} \\
+\widehat{\Gamma}^0_{5,3} &=  \frac{N^{0}_{01} \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2}{4} + \frac{N^{0}_{02} \mathring{\widetilde{\xi}}_1^{2}}{4} + \frac{N^{0}_{11} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2}{4} + \frac{N^{0}_{12} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1}{4} \\
+\widehat{\Gamma}^0_{5,4} &=  \frac{N^{0}_{01} \mathring{\widetilde{\xi}}_2^{2}}{4} + \frac{N^{0}_{02} \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2}{4} + \frac{N^{0}_{12} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_2}{4} + \frac{N^{0}_{22} \mathring{\widetilde{\xi}}_0 \mathring{\widetilde{\xi}}_1}{4} \\
+\widehat{\Gamma}^0_{5,5} &=  \frac{N^{0}_{11} \mathring{\widetilde{\xi}}_2^{2}}{4} + \frac{N^{0}_{12} \mathring{\widetilde{\xi}}_1 \mathring{\widetilde{\xi}}_2}{2} + \frac{N^{0}_{22} \mathring{\widetilde{\xi}}_1^{2}}{4} 
+\end{aligned}
+\end{equation}
+Finally, compute
+\begin{equation}
+\widehat{\sigma}_i = -\widehat{\Gamma}^{0}_{ij} \widehat{\tau}_j.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Sensitivity with the adjoint method}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 We would like to compute the sensitivities
