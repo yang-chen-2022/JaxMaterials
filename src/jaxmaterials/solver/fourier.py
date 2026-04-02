@@ -85,6 +85,33 @@ def get_xizero(grid_spec, dtype=jnp.float64):
     return (xi_tilde / xi_nrm).astype(dtype)
 
 
+def get_laplacian(grid_spec, dtype=jnp.float64):
+    """Construct the laplacian operator in Fourier space
+
+    This function returns a tensor of shape (1,N_0,N_1,N_2) which contains
+    the laplacian operator (xixi) in fourier space.
+
+     :arg grid_spec: namedtuple with grid specifications
+     :arg dtype: data type
+
+    """
+    dx = grid_spec.Lx / grid_spec.nx
+    dy = grid_spec.Ly / grid_spec.ny
+    dz = grid_spec.Lz / grid_spec.nz
+    # Normalised momentum vectors in all three spatial directions
+    K = [
+        2 * np.pi * np.arange(n) / n for n in (grid_spec.nx, grid_spec.ny, grid_spec.nz)
+    ]
+    # Grid with normalised momentum vectors
+    xi = np.meshgrid(*K, indexing="ij")
+    # Grid with xi*xi (laplacian in Fourier space)
+    xixi = 2.* (np.cos(xi[0]) - 1.) / dx**2 \
+         + 2.* (np.cos(xi[1]) - 1.) / dy**2 \
+         + 2.* (np.cos(xi[2]) - 1.) / dz**2
+    return xixi[np.newaxis,...].astype(dtype)
+
+
+
 def fourier_solve(tau_hat, lmbda0, mu0, xizero):
     """Solve residual equation for reference material in Fourier space
 
